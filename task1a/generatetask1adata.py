@@ -10,5 +10,3 @@ with open('task1a.data', 'w', newline='') as txtfile:
     for template in templates:
         for year in years:
             txtfile.write(template[:template.find("[[")] + year + template[template.find("]]")+2:] + "\n")
-        
-   
