@@ -6,13 +6,13 @@
 # distribution over all years we consider (i.e. 1800 - 2024). This will help us decipher
 # which years the LM uses to describe a time-tied object.
 
-TEMPLATES = ["Wi-Fi", "washboards", "The Knickerbocker Trust Company", "COVID", "the Taj Mahal",
+OBJECTS = ["Wi-Fi", "washboards", "The Knickerbocker Trust Company", "COVID", "the Taj Mahal",
              "steam engines", "websites", "telephones", "satellites", "social media", "planes",
              "needles", "alcohol", "video games", "iPhones", "South Sudan", "USSR", "Russia", "India",
              "influenza", "organ transplants", "electricity", "Eiffel Tower", "transistors",
              "Istanbul", "Constantinople", "trains", "pagers", "floppy disks", "telegrams", "VHS tapes",
              "CD racks", "Zepplins", "carriages", "check books", "credit cards", "milk delivery", "ice boxes",
-             "swing dancing", "Vaudeville Shows", "imperialism"
+             "swing dancing", "Vaudeville Shows", "imperialism", "the Olympics"
             ]
 
 # TODO: some of these prompts might not elicit the model's time
@@ -21,12 +21,12 @@ PHRASING = ["Tell me about ", "Explain to me, what is ", "What is ", "Today I le
            "Can you tell me about ", "I'd love to learn more about ", "Help me understand ", 
            "I'm curious about ", "Give me an overview of "]
 
-def generate_objs_in_year_data(templates, phrasing):
+def generate_objs_in_year_data(objs, phrasing):
     with open('task1c/task1c.data', 'w', newline='',) as file:
-        for template in templates:
+        for obj in objs:
             for phrase in phrasing:
-                prompt = phrase + template + ". The year is "
+                prompt = phrase + obj + ". The year is "
                 file.write(prompt + "\n")
     
 if __name__ == "__main__":
-    generate_objs_in_year_data(templates=TEMPLATES, phrasing=PHRASING)
+    generate_objs_in_year_data(objs=OBJECTS, phrasing=PHRASING)

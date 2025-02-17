@@ -12,8 +12,8 @@ TEMPLATES = ["The current president of the US is ", # Donald Trump, as of 2025
              "The previous Olympics took place at ", # Paris France, in 2024
             ]
 
-# ideas to generate more prompts: to generate 
-# could sweep over "previous"/"current"/"next"  
+# TODO: generate more prompts by sweeping over...
+# "previous"/"current"/"next"  
 
 def generate_currrent_year_data(templates):
     with open('task1b/task1b.data', 'w', newline='',) as file:
