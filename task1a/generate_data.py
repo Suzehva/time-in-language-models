@@ -11,13 +11,12 @@ TEMPLATES = ["In [[YEAR]] there ", "In [[YEAR]], they ",
 START_YEAR = 1950
 END_YEAR = 2050
 
-def generate_year_data(start_year:int, end_year:int, templates):
+def generate_year_distr_data(start_year:int, end_year:int, templates):
     with open('task1a/task1a.data', 'w', newline='',) as file:
-        # writer = csv.writer(file)
         for template in templates:
             for year in range(start_year, end_year + 1):
-                data = template[:template.find("[[")] + str(year) + template[template.find("]]")+2:]
-                file.write(data + "\n")
+                prompt = template[:template.find("[[")] + str(year) + template[template.find("]]")+2:]
+                file.write(prompt + "\n")
     
 if __name__ == "__main__":
-    generate_year_data(start_year=START_YEAR, end_year=END_YEAR, templates=TEMPLATES)
+    generate_year_distr_data(start_year=START_YEAR, end_year=END_YEAR, templates=TEMPLATES)
