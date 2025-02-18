@@ -49,6 +49,8 @@ class MultiModelManager:
                     
                     # Generate only 1 token
                     output = model.generate(**inputs, max_new_tokens=max_new_tokens)
+                    # TODO: want to run forward function instead (look at logits)
+                    # attach the expected output to input prompt and use the forward pass to find its probability  (teacher forcing)
                     
                     # Decode only the newly generated token
                     generated_token = tokenizer.decode(output[0][-1], skip_special_tokens=True)
@@ -106,8 +108,16 @@ def main():
         # Example of generating text from file
         generated_texts = manager.generate_text_from_file(model_id, "task1a/task1a.data", max_new_tokens=1)
         
+        # TODO: look into sampling algorithm (probably using greedy right now)
+
+        # TODO: call model's forward function to get logits (loss, logits are both returned from hugging face)
+        # use probability distr instead of top token
+        # track probabiliy change across is/was/will/etc
+
         # Now store the generated output to a file
-        manager.store_output_to_csv(generated_texts, "task1a_"+model_ids)
+        manager.store_output_to_csv(generated_texts, "task1a_"+model_id)
 
 if __name__ == "__main__":
     main()
+
+

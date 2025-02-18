@@ -15,11 +15,16 @@ OBJECTS = ["Wi-Fi", "washboards", "The Knickerbocker Trust Company", "COVID", "t
              "swing dancing", "Vaudeville Shows", "imperialism", "the Olympics"
             ]
 
-# TODO: some of these prompts might not elicit the model's time
+# TODO: some of these prompts might not elicit the model's internal time
 PHRASING = ["Tell me about ", "Explain to me, what is ", "What is ", "Today I learned about ", 
            "I'd like to know more about ", "Give me an overview of ", "Share some insights on ", 
            "Can you tell me about ", "I'd love to learn more about ", "Help me understand ", 
            "I'm curious about ", "Give me an overview of "]
+
+# TODO get hidden state of last token (logits) and compare to all years' embeddings
+# gemma might have split all years into digits (decode the year) but other models would likely have the entire year as tokens
+# for gemma -- attach "2000" to prompt to force decode and see the probability of each char given the prev (conditional probability)
+# start with 1950-2050 range and change range as needed after seeing distribution
 
 def generate_objs_in_year_data(objs, phrasing):
     with open('task1c/task1c.data', 'w', newline='',) as file:

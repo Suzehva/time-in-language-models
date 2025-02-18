@@ -15,6 +15,7 @@ OBJECTS = ["Wi-Fi", "washboards", "The Knickerbocker Trust Company", "COVID", "t
             ]
 
 # TODO: we could alternatively keep the tense constant
+# fix the tense to match obj
 TENSE = ["is ", "was ", "will be "]
 
 START_YEAR = 1950

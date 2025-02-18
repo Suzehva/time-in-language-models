@@ -14,6 +14,7 @@ TEMPLATES = ["The current president of the US is ", # Donald Trump, as of 2025
 
 # TODO: generate more prompts by sweeping over...
 # "previous"/"current"/"next"  
+# change how we phrase the query
 
 def generate_currrent_year_data(templates):
     with open('task1b/task1b.data', 'w', newline='',) as file:

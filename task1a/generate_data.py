@@ -20,3 +20,25 @@ def generate_year_distr_data(start_year:int, end_year:int, templates):
     
 if __name__ == "__main__":
     generate_year_distr_data(start_year=START_YEAR, end_year=END_YEAR, templates=TEMPLATES)
+
+# TODO
+# logit:  batch size  x  seq len * vocab size
+# find where "is"/"was"/"were" are using tokenizer
+#   tokenizer.encode(WORD)   
+#   " was" != "was"  (different tokens)
+
+# present vs past tense using lexer (package: https://www.nltk.org/) or could manually check
+ # can also as gpt to do this classifcation
+
+# can also look into probabilities of tenses in addition to just probabilities of is/was/were (a certain word in all tense)
+ # add all past tense words' probabilities to understand the prob of the next token being past tense
+ # https://github.com/monolithpl/verb.forms.dictionary/blob/master/csv/verbs-all.csv
+
+
+# TODO - before proj milestone due
+# latent concept in model: what is the current time?
+# can start editing the model
+#  ROME library or use Jing's library
+#    (https://github.com/stanfordnlp/pyvene, https://github.com/stanfordnlp/pyvene/blob/main/tutorials/basic_tutorials/Basic_Intervention.ipynb)
+#    do a basic test with swapping base and counterfactual information to see whether our edits work [base vs counterfactual prompt]
+#    can swap out the way that the current year is being encoded inside of the model
