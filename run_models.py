@@ -90,32 +90,40 @@ class MultiModelManager:
 
 
 
-
 def main():
     model_ids = [
         # "meta-llama/Llama-3.2-1B",
-        "allenai/OLMo-1B-hf",
-        "google/gemma-2-2b",
+        # "allenai/OLMo-1B-hf",
+        "google/gemma-2-2b"
+    ]
+
+    tasks = [
+        "task1a",
+        "task1b",
+        "task1c",
+        "task1d"
     ]
     
     # Create the MultiModelManager instance
     manager = MultiModelManager()
 
-    # Load the models
     for model_id in model_ids:
+        # load model
         manager.load_model(model_id)
-
-        # Example of generating text from file
-        generated_texts = manager.generate_text_from_file(model_id, "task1a/task1a.data", max_new_tokens=1)
         
-        # TODO: look into sampling algorithm (probably using greedy right now)
+        for task in tasks:
+            # generate next token(s) from a file of prompts
+            task_prompts = task+ "/" + task + ".data"  # eg. task1a/task1a.data
+            generated_texts = manager.generate_text_from_file(model_id, task_prompts, max_new_tokens=1)
+            
+            # TODO: look into sampling algorithm (probably using greedy right now)
 
-        # TODO: call model's forward function to get logits (loss, logits are both returned from hugging face)
-        # use probability distr instead of top token
-        # track probabiliy change across is/was/will/etc
+            # TODO: call model's forward function to get logits (loss, logits are both returned from hugging face)
+            # use probability distr instead of top token
+            # track probabiliy change across is/was/will/etc
 
-        # Now store the generated output to a file
-        manager.store_output_to_csv(generated_texts, "task1a_"+model_id)
+            # store generated output to file
+            manager.store_output_to_csv(generated_texts, task) # it automatically saves to the model's output folder
 
 if __name__ == "__main__":
     main()
