@@ -92,6 +92,8 @@ class MultiModelManager:
 def main():
     model_ids = [
         "meta-llama/Llama-3.2-1B",
+        "allenai/OLMo-1B-hf",
+        "google/gemma-2-2b",
     ]
     
     # Create the MultiModelManager instance
@@ -101,12 +103,11 @@ def main():
     for model_id in model_ids:
         manager.load_model(model_id)
 
-    # Example of generating text from file
-    generated_texts = manager.generate_text_from_file("meta-llama/Llama-3.2-1B", "task1a/task1a.data", max_new_tokens=1)
-    
-    # Now store the generated output to a file
-    manager.store_output_to_csv(generated_texts, "task1a")
-
+        # Example of generating text from file
+        generated_texts = manager.generate_text_from_file(model_id, "task1a/task1a.data", max_new_tokens=1)
+        
+        # Now store the generated output to a file
+        manager.store_output_to_csv(generated_texts, "task1a_"+model_ids)
 
 if __name__ == "__main__":
     main()
