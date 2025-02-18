@@ -6,8 +6,8 @@ import csv
 
 class MultiModelManager:
     def __init__(self, device=None):
-        # Initialize the device (CPU or GPU)
-        self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        # Initialize the device (GPU or MPS [for apple silicon] or CPU)
+        self.device = device if device else ("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
         print(f'Using device: {self.device}')
         
         # Dictionary to hold multiple models and tokenizers
@@ -19,7 +19,13 @@ class MultiModelManager:
         if model_id not in self.models:
             print(f"Loading model {model_id}...")
             tokenizer = AutoTokenizer.from_pretrained(model_id)
-            model = AutoModelForCausalLM.from_pretrained(model_id).to(self.device)
+            # TODO get gemma running!? low_cpu_mem_usage=True  # reduce the precision for gemma to reduce memory usage
+            model = AutoModelForCausalLM.from_pretrained(model_id).to(self.device) 
+
+            # Explicitly limit batch size (if applicable) -- for gemma bc otherwise it gets stuck
+            if hasattr(model, "config"):
+                model.config.max_batch_size = 1  # Some models use this for internal batching
+
             self.models[model_id] = model
             self.tokenizers[model_id] = tokenizer
         else:
