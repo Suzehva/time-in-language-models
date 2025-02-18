@@ -41,4 +41,7 @@ if __name__ == "__main__":
 #  ROME library or use Jing's library
 #    (https://github.com/stanfordnlp/pyvene, https://github.com/stanfordnlp/pyvene/blob/main/tutorials/basic_tutorials/Basic_Intervention.ipynb)
 #    do a basic test with swapping base and counterfactual information to see whether our edits work [base vs counterfactual prompt]
-#    can swap out the way that the current year is being encoded inside of the model
+#    can change the internal model representation ==> find the way that the current year is being encoded inside of the model
+#    try to modify the trace instead of the input token -- this means model editing
+#   NOTE we are changing model hidden state (from its counterfactual equivalent) at inference time (must have a base and counterfactual 
+#               to test); not changing the model weights themselves
