@@ -77,8 +77,6 @@ class MultiModelManager:
                 input_text = line.strip()
                 if input_text:
                     inputs = tokenizer(input_text, return_tensors="pt").to(self.device)
-                    
-                    # Generate only 1 token
                     output = model.generate(**inputs, max_new_tokens=max_new_tokens)
                     # TODO: want to run forward function instead (look at logits)
                     # attach the expected output to input prompt and use the forward pass to find its probability  (teacher forcing)
