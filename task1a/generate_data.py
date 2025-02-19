@@ -11,13 +11,37 @@ TEMPLATES = ["In [[YEAR]] there ", "In [[YEAR]], they ",
 START_YEAR = 1950
 END_YEAR = 2050
 
-def generate_year_data(start_year:int, end_year:int, templates):
+def generate_year_distr_data(start_year:int, end_year:int, templates):
     with open('task1a/task1a.data', 'w', newline='',) as file:
-        # writer = csv.writer(file)
         for template in templates:
             for year in range(start_year, end_year + 1):
-                data = template[:template.find("[[")] + str(year) + template[template.find("]]")+2:]
-                file.write(data + "\n")
+                prompt = template[:template.find("[[")] + str(year) + template[template.find("]]")+2:]
+                file.write(prompt + "\n")
     
 if __name__ == "__main__":
-    generate_year_data(start_year=START_YEAR, end_year=END_YEAR, templates=TEMPLATES)
+    generate_year_distr_data(start_year=START_YEAR, end_year=END_YEAR, templates=TEMPLATES)
+
+# TODO
+# logit:  batch size  x  seq len * vocab size
+# find where "is"/"was"/"were" are using tokenizer
+#   tokenizer.encode(WORD)   
+#   " was" != "was"  (different tokens)
+
+# present vs past tense using lexer (package: https://www.nltk.org/) or could manually check
+ # can also as gpt to do this classifcation
+
+# can also look into probabilities of tenses in addition to just probabilities of is/was/were (a certain word in all tense)
+ # add all past tense words' probabilities to understand the prob of the next token being past tense
+ # https://github.com/monolithpl/verb.forms.dictionary/blob/master/csv/verbs-all.csv
+
+
+# TODO - before proj milestone due
+# latent concept in model: what is the current time?
+# can start editing the model
+#  ROME library or use Jing's library
+#    (https://github.com/stanfordnlp/pyvene, https://github.com/stanfordnlp/pyvene/blob/main/tutorials/basic_tutorials/Basic_Intervention.ipynb)
+#    do a basic test with swapping base and counterfactual information to see whether our edits work [base vs counterfactual prompt]
+#    can change the internal model representation ==> find the way that the current year is being encoded inside of the model
+#    try to modify the trace instead of the input token -- this means model editing
+#   NOTE we are changing model hidden state (from its counterfactual equivalent) at inference time (must have a base and counterfactual 
+#               to test); not changing the model weights themselves

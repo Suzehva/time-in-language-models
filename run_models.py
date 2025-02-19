@@ -6,8 +6,8 @@ import csv
 
 class MultiModelManager:
     def __init__(self, device=None):
-        # Initialize the device (CPU or GPU)
-        self.device = device if device else ("cuda" if torch.cuda.is_available() else "cpu")
+        # Initialize the device (GPU or MPS [for apple silicon] or CPU)
+        self.device = device if device else ("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
         print(f'Using device: {self.device}')
         
         # Dictionary to hold multiple models and tokenizers
@@ -19,7 +19,13 @@ class MultiModelManager:
         if model_id not in self.models:
             print(f"Loading model {model_id}...")
             tokenizer = AutoTokenizer.from_pretrained(model_id)
-            model = AutoModelForCausalLM.from_pretrained(model_id).to(self.device)
+            # TODO get gemma running!? low_cpu_mem_usage=True  # reduce the precision for gemma to reduce memory usage
+            model = AutoModelForCausalLM.from_pretrained(model_id).to(self.device) 
+
+            # Explicitly limit batch size (if applicable) -- for gemma bc otherwise it gets stuck
+            if hasattr(model, "config"):
+                model.config.max_batch_size = 1  # Some models use this for internal batching
+
             self.models[model_id] = model
             self.tokenizers[model_id] = tokenizer
         else:
@@ -47,6 +53,8 @@ class MultiModelManager:
                 if input_text:
                     inputs = tokenizer(input_text, return_tensors="pt").to(self.device)
                     output = model.generate(**inputs, max_new_tokens=max_new_tokens)
+                    # TODO: want to run forward function instead (look at logits)
+                    # attach the expected output to input prompt and use the forward pass to find its probability  (teacher forcing)
                     
                     # Decode only the newly generated token
                     generated_token = tokenizer.decode(output[0][-1], skip_special_tokens=True)
@@ -86,27 +94,44 @@ class MultiModelManager:
 
 
 
-
 def main():
     model_ids = [
         "meta-llama/Llama-3.2-1B",
         "allenai/OLMo-1B-hf",
-        "google/gemma-2-2b",
+        # "google/gemma-2-2b"
     ]
+
+    # task : new tokens
+    tasks = {  
+        # "task1a":1,
+        "task1b":5,
+        "task1c":10,
+        "task1d":10
+    }
     
     # Create the MultiModelManager instance
     manager = MultiModelManager()
 
-    # Load the models
     for model_id in model_ids:
+        # load model
         manager.load_model(model_id)
+        
+        for task, new_tokens in tasks.items():
+            # generate next token(s) from a file of prompts
+            task_prompts = task + "/" + task + ".data"  # eg. task1a/task1a.data
+            generated_texts = manager.generate_text_from_file(model_id, task_prompts, max_new_tokens=new_tokens)
+            
+            # TODO: look into sampling algorithm (probably using greedy right now)
 
-    # Example of generating text from file
-    generated_texts = manager.generate_text_from_file("meta-llama/Llama-3.2-1B", "task1a/task1a.data", max_new_tokens=1)
-    
-    # Now store the generated output to a file
-    manager.store_output_to_csv(generated_texts, "task1a")
+            # TODO: call model's forward function to get logits (loss, logits are both returned from hugging face)
+            # use probability distr instead of top token
+            # track probabiliy change across is/was/will/etc
 
+            # store generated output to file
+            file = task + "/" + model_id
+            manager.store_output_to_csv(generated_texts, file) # it automatically saves to the model's output folder
 
 if __name__ == "__main__":
     main()
+
+
