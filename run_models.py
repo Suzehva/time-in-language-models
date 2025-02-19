@@ -58,8 +58,8 @@ class MultiModelManager:
                     # TODO: want to run forward function instead (look at logits)
                     # attach the expected output to input prompt and use the forward pass to find its probability  (teacher forcing)
                     
-                    # Decode only the newly generated token
-                    generated_token = tokenizer.decode(output[0][-1], skip_special_tokens=True)
+                    # Decode only the newly generated tokens
+                    generated_token = tokenizer.decode(output[0][-max_new_tokens:], skip_special_tokens=True)
 
                     # Store structured data (model, input, output)
                     generated_data.append((model_id, input_text, generated_token))
@@ -103,7 +103,7 @@ def main():
         # "google/gemma-2-2b"
     ]
 
-    # task : new tokens
+    # task : max num of new tokens
     tasks = {  
         # "task1a":1,
         "task1b":5,
@@ -118,10 +118,11 @@ def main():
         # load model
         manager.load_model(model_id)
         
-        for task, new_tokens in tasks.items():
+        for task, max_new_tokens in tasks.items():
             # generate next token(s) from a file of prompts
             task_prompts = task + "/" + task + ".data"  # eg. task1a/task1a.data
-            generated_texts = manager.generate_text_from_file(model_id, task_prompts, max_new_tokens=new_tokens)
+
+            generated_texts = manager.generate_text_from_file(model_id, task_prompts, max_new_tokens=max_new_tokens)
             
             # TODO: look into sampling algorithm (probably using greedy right now)
 

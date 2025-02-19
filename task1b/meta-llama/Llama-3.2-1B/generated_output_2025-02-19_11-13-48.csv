@@ -1,9 +1,0 @@
-model,input_text,generated_token
-meta-llama/Llama-3.2-1B,The current president of the US is, interesting
-meta-llama/Llama-3.2-1B,The next Olympics will take place at, year
-meta-llama/Llama-3.2-1B,The newest COVID variant is, (
-meta-llama/Llama-3.2-1B,The latest iPhone model is, Plus
-meta-llama/Llama-3.2-1B,The most recent FIFA World Cup winner is, win
-meta-llama/Llama-3.2-1B,The previous Nobel Prize in Physics went to, had
-meta-llama/Llama-3.2-1B,The previous president of the US is, successful
-meta-llama/Llama-3.2-1B,The previous Olympics took place at, 
