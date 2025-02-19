@@ -98,17 +98,17 @@ class MultiModelManager:
 
 def main():
     model_ids = [
-        # "meta-llama/Llama-3.2-1B",
-        # "allenai/OLMo-1B-hf",
-        "google/gemma-2-2b"
+        "meta-llama/Llama-3.2-1B",
+        "allenai/OLMo-1B-hf",
+        # "google/gemma-2-2b"
     ]
 
-    tasks = [
-        "task1a",
-        "task1b",
-        "task1c",
-        "task1d"
-    ]
+    tasks = {  # task: new tokens
+        "task1a":1,
+        "task1b":5,
+        "task1c":10,
+        "task1d":1
+    }
     
     # Create the MultiModelManager instance
     manager = MultiModelManager()
@@ -117,10 +117,10 @@ def main():
         # load model
         manager.load_model(model_id)
         
-        for task in tasks:
+        for task, new_tokens in tasks.items():
             # generate next token(s) from a file of prompts
-            task_prompts = task+ "/" + task + ".data"  # eg. task1a/task1a.data
-            generated_texts = manager.generate_text_from_file(model_id, task_prompts, max_new_tokens=1)
+            task_prompts = task + "/" + task + ".data"  # eg. task1a/task1a.data
+            generated_texts = manager.generate_text_from_file(model_id, task_prompts, max_new_tokens=new_tokens)
             
             # TODO: look into sampling algorithm (probably using greedy right now)
 
@@ -129,7 +129,8 @@ def main():
             # track probabiliy change across is/was/will/etc
 
             # store generated output to file
-            manager.store_output_to_csv(generated_texts, task) # it automatically saves to the model's output folder
+            file = task + "/" + model_id
+            manager.store_output_to_csv(generated_texts, file) # it automatically saves to the model's output folder
 
 if __name__ == "__main__":
     main()

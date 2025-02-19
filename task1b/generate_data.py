@@ -7,7 +7,7 @@ TEMPLATES = ["The current president of the US is ", # Donald Trump, as of 2025
              "The newest COVID variant is ", # XEC, as of 2025
              "The latest iPhone model is ", # iPhone 16, as of 2025
              "The most recent FIFA World Cup winner is ", # Argentina, in 2022
-             "The previous Nobel Prize in Physics went to " # John J. Hopfield and Geoffrey Hinton in 2024
+             "The previous Nobel Prize in Physics went to ", # John J. Hopfield and Geoffrey Hinton in 2024
              "The previous president of the US is ", # Joe Biden, as of 2025
              "The previous Olympics took place at ", # Paris France, in 2024
             ]
