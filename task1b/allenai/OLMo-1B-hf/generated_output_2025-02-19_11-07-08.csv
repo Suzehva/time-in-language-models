@@ -1,0 +1,8 @@
+model,input_text,generated_token
+allenai/OLMo-1B-hf,The current president of the US is, a
+allenai/OLMo-1B-hf,The next Olympics will take place at, the
+allenai/OLMo-1B-hf,The newest COVID variant is, more
+allenai/OLMo-1B-hf,The latest iPhone model is, the
+allenai/OLMo-1B-hf,The most recent FIFA World Cup winner is, the
+allenai/OLMo-1B-hf,The previous Nobel Prize in Physics went to The previous president of the US is, the
+allenai/OLMo-1B-hf,The previous Olympics took place at, the
