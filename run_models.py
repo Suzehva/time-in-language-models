@@ -31,6 +31,31 @@ class MultiModelManager:
         else:
             print(f"Model {model_id} already loaded.")
     
+    def learn_relevant_vocab(self, model_id: str):
+        words_of_interest = [str(yr) for yr in range(1600, 2100)]
+        tense = ["was", "will", "is", "were", "are", "aditi", "suze"]
+        words_of_interest += [t for t in tense]
+
+        if model_id not in self.models:
+            raise ValueError(f"Model {model_id} is not loaded yet. Please load it first.")
+
+        tokenizer = self.tokenizers[model_id]
+        token_id_map = {}
+        
+        # note: there could me multiple token ids for a word
+        for word in words_of_interest:
+            # get the id's that correspond to a word and its subwords
+            token_ids = tokenizer(word, add_special_tokens=False)["input_ids"] 
+            # get the pieces that each id correspond to. 
+            # helps understand how the word was split when making tokens
+            token_pieces = tokenizer.convert_ids_to_tokens(token_ids) 
+
+            token_id_map[word] = {
+                "token_ids": token_ids,
+                "tokens": token_pieces
+            }
+        return token_id_map
+
     def generate_text_from_file(self, model_id: str, filename: str, max_new_tokens):
         """
         Reads input text from a file, generates one token per input, and returns structured data.
@@ -57,7 +82,6 @@ class MultiModelManager:
                     output = model.generate(**inputs, max_new_tokens=max_new_tokens)
                     # TODO: want to run forward function instead (look at logits)
                     # attach the expected output to input prompt and use the forward pass to find its probability  (teacher forcing)
-                    
                     # Decode only the newly generated tokens
                     generated_token = tokenizer.decode(output[0][-max_new_tokens:], skip_special_tokens=True)
 
@@ -117,6 +141,11 @@ def main():
     for model_id in model_ids:
         # load model
         manager.load_model(model_id)
+
+        token_id_map = manager.learn_relevant_vocab(model_id)
+        # storing doesn't work because of how store_output_to_csv works
+        # file = "model-vocab/" + model_id
+        # manager.store_output_to_csv(token_id_map, file)
         
         for task, max_new_tokens in tasks.items():
             # generate next token(s) from a file of prompts
