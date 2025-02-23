@@ -18,14 +18,10 @@ END_YEAR = 2050
 PRES_COUNTRIES = ["the United States", "Brazil", "South Korea", "Iran", "Nigeria", ]
 PM_COUNTRIES = ["Netherlands", "the United Kingdom", "Canada", "India", "Thailand", 
                 "Malaysia", "Israel", "Italy", "Australia", "Greece", "Bangladesh"]
-SPORTS = ["the FIFA World Cup", "the ICC Cricket World Cup",
-    "the Super Bowl", "the UEFA Champions League Final", "the Wimbledon Championships", "the Tour de France",
-    "the NBA Finals", "the Formula 1 Grand Prix", "the Rugby World Cup",
-    "the Asian Games", "the Commonwealth Games", "the Stanley Cup Finals",
-    "the Masters Tournament (Golf)", "the US Open (Tennis)", "the French Open (Roland-Garros)",
-    "the Indian Premier League (IPL)", "the MLB World Series",
-    "the Dakar Rally", "the Boston Marathon", "the Summer X Games",
-    "the Winter X Games","the Davis Cup (Tennis)", "the Le Mans 24 Hours"]
+SPORTS = [  "the FIFA World Cup", "the ICC Cricket World Cup",
+            "the Super Bowl", "the Wimbledon Championships", "the Tour de France",
+            "the NBA Finals", "the Formula 1 Grand Prix",
+            "the US Open (Tennis)", "the MLB World Series", "the Le Mans 24 Hours"]
 
 def generate_task2a(start_year:int, end_year:int, templates):
     with open('task2a/task2a.data', 'w', newline='',) as file:
