@@ -178,9 +178,9 @@ def main():
     # task : max num of new tokens (max_new_tokens)
     # tasks = {  
     #     "task1a":1,
-    #     #"task1b":5,
-    #     #"task1c":10,
-    #     #"task1d":10
+    #     "task1b":5,
+    #     "task1c":10,
+    #     "task1d":10
     # }
     
     # Create the MultiModelManager instance
