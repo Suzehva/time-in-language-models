@@ -225,7 +225,7 @@ def main():
 
         # get next token generation and its logits
         generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=1) # only generate 1 token
-        manager.store_output_to_csv(generated_texts, "task1a/" + model_id)
+        #manager.store_output_to_csv(generated_texts, "task1a/" + model_id)
 
         # get indices of words we care about 
         relevant_words = ["was", "will", "is", "were", "are"]
