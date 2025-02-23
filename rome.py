@@ -56,27 +56,19 @@ colors={
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
+
+# MODEL SETUP
+
 model_name = "meta-llama/Llama-3.2-1B"  # autoregressive model 
 config = AutoConfig.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 
-embedding_dim = model.get_input_embeddings().weight.shape[1]
-# print("Embedding Dimension:", embedding_dim)
-
-# base = tokenizer("test", return_tensors="pt").to(device)
-# with torch.no_grad():
-#     output = model(**base)
-# print("Hidden State Shape:", output.logits.shape)
-
 
 ##  VERSION 1 FACTUAL RECALL 
-'''
+# '''
 base = "The Space Needle is in downtown"
-inputs = [
-    tokenizer(base, return_tensors="pt").to(device),
-]
-# print(base)
+inputs = [tokenizer(base, return_tensors="pt").to(device),]
 res = model(**inputs[0])
 
 # instead of using the provided distr function (doesn't work on tiny LLAMA or OLMO)
@@ -84,57 +76,81 @@ res = model(**inputs[0])
 logits = res.logits[0, -1, :]  # Get the last token's logits (for "downtown")
 distrib = sm(res.logits) 
 
-# top_k = torch.topk(logits, 10)  # Get top 10 predictions
-# top_tokens = [tokenizer.decode([idx]) for idx in top_k.indices.tolist()]
-
 top_vals(tokenizer, distrib[0, -1], n=10)
-'''
-
-##  VERSION 2 CORRUPTED RUN
 # '''
 
-# class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
-#     def __init__(self, embed_dim, **kwargs):
-#         super().__init__()
-#         self.interchange_dim = embed_dim
-#         rs = np.random.RandomState(1)
-#         prng = lambda *shape: rs.randn(*shape)
-#         second_dim = 4  # tried 7 and it kinda worked...
-#         self.noise = torch.from_numpy(prng(1, second_dim, embed_dim)).to(device) 
-#         self.noise_level = 0.13462981581687927
 
-#     def forward(self, base, source=None, subspaces=None):
-#         # if self.noise.shape[1] != base.shape[1]:  # Ensure matching shape
-#             # rs = np.random.RandomState(1)
-#             # prng = lambda *shape: rs.randn(*shape)
-#             # self.noise = torch.from_numpy(prng(1, base.shape[1], self.interchange_dim)).to(device) 
-#             # self.noise = torch.from_numpy(self.prng(1, , self.interchange_dim)).to(device)
-#         base[..., : self.interchange_dim] += self.noise * self.noise_level
-#         return base
 
-#     def __str__(self):
-#         return f"NoiseIntervention(embed_dim={self.embed_dim})"
+
+# NOTES (TODO)
+# 1. part 1 works for both olmo and llama
+# 2. it seems like hidden states are not accessible at all for olmo, and the structure of 
+#   the library makes it difficult to access hidden states for llama. so part 2 needs some work
+
+##  VERSION 2 CORRUPTED RUN
+
+class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
+    def __init__(self, embed_dim, **kwargs):
+        super().__init__()
+        self.interchange_dim = embed_dim
+        rs = np.random.RandomState(1)
+        prng = lambda *shape: rs.randn(*shape)
+        second_dim = 4  # tried 7 and it kinda worked...
+        self.noise = torch.from_numpy(prng(1, second_dim, embed_dim)).to(device) 
+        self.noise_level = 0.13462981581687927
+
+    def forward(self, base, source=None, subspaces=None):   
+        print("Base shape:", base.shape)
+        print("Noise shape:", self.noise.shape)
+        print("Interchange dim:", self.interchange_dim)
+        
+        noise = self.noise
+        if self.noise.shape[1] < base.shape[1]:
+            self.noise = self.noise.expand(-1, base.shape[1], -1)  # IDK if this might mess stuff up TODO
+        # if base.shape[1] != noise.shape[1]:
+            # noise = noise.expand(base.shape[0], base.shape[1], base.shape[2])
+        base[..., : self.interchange_dim] += noise * self.noise_level
+        
+        # base[..., : self.interchange_dim] += self.noise * self.noise_level
+        return base
+
+    def __str__(self):
+        return f"NoiseIntervention(embed_dim={self.embed_dim})"
     
 
-# def corrupted_config(model_type):
-#     config = IntervenableConfig(
-#         model_type=model_type,
-#         representations=[
-#             RepresentationConfig(
-#                 0,              # layer
-#                 "block_input",  # intervention type
-#             ),
-#         ],
-#         intervention_types = NoiseIntervention,
-#     )
-#     return config
+def corrupted_config(model_type):
+    config = IntervenableConfig(
+        model_type=model_type,
+        representations=[
+            RepresentationConfig(
+                0,              # layer
+                "block_input",  # intervention type
+            ),
+        ],
+        intervention_types = NoiseIntervention,
+    )
+    return config
+
+
+# version 1
 
 # base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
+
 # config = corrupted_config(type(model))
+# config.output_hidden_states = True  
+
 # intervenable = IntervenableModel(config, model)
+
+# # _, counterfactual_outputs = intervenable(
+# #     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}
+# # )
 # _, counterfactual_outputs = intervenable(
-#     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}
+#     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}, output_hidden_states=True
 # )
+
+# hidden_states = counterfactual_outputs.hidden_states
+# print("HIDDEN STATES   ", hidden_states)
+# print(f"Hidden state shape per layer: {hidden_states.shape}")  # (batch, seq_len, hidden_dim)
 
 # # distrib = embed_to_distrib(model, counterfactual_outputs.last_hidden_state, logits=False)
 # # res = model(**intervenable)
@@ -145,4 +161,18 @@ top_vals(tokenizer, distrib[0, -1], n=10)
 # distrib = sm(res.logits) 
 
 # top_vals(tokenizer, distrib[0][-1], n=10)
-# # '''
+
+
+# version 2
+
+# base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
+# config = corrupted_config(type(model))
+# config.output_hidden_states = True
+# intervenable = IntervenableModel(config, model)
+# _, counterfactual_outputs = intervenable(
+
+#     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}, output_hidden_states=True
+# )
+
+# distrib = embed_to_distrib(model, counterfactual_outputs.last_hidden_state, logits=False)
+# top_vals(tokenizer, distrib[0][-1], n=10)
