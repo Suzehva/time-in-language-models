@@ -132,6 +132,8 @@ def corrupted_config(model_type):
     return config
 
 
+
+
 # version 1
 
 # base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
@@ -176,3 +178,4 @@ def corrupted_config(model_type):
 
 # distrib = embed_to_distrib(model, counterfactual_outputs.last_hidden_state, logits=False)
 # top_vals(tokenizer, distrib[0][-1], n=10)
+

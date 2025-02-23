@@ -16,10 +16,10 @@ TEMPLATES = ["The current president of the US is ", # Donald Trump, as of 2025
 # "previous"/"current"/"next"  
 # change how we phrase the query
 
-def generate_currrent_year_data(templates):
+def generate_task1b(templates):
     with open('task1b/task1b.data', 'w', newline='',) as file:
         for template in templates:
             file.write(template + "\n")
     
 if __name__ == "__main__":
-    generate_currrent_year_data(templates=TEMPLATES)
+    generate_task1b(templates=TEMPLATES)

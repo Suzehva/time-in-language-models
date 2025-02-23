@@ -26,7 +26,7 @@ PHRASING = ["Tell me about ", "Explain to me, what is ", "What is ", "Today I le
 # for gemma -- attach "2000" to prompt to force decode and see the probability of each char given the prev (conditional probability)
 # start with 1950-2050 range and change range as needed after seeing distribution
 
-def generate_objs_in_year_data(objs, phrasing):
+def generate_task1c(objs, phrasing):
     with open('task1c/task1c.data', 'w', newline='',) as file:
         for obj in objs:
             for phrase in phrasing:
@@ -34,4 +34,4 @@ def generate_objs_in_year_data(objs, phrasing):
                 file.write(prompt + "\n")
     
 if __name__ == "__main__":
-    generate_objs_in_year_data(objs=OBJECTS, phrasing=PHRASING)
+    generate_task1c(objs=OBJECTS, phrasing=PHRASING)
