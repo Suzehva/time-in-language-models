@@ -10,6 +10,10 @@ TEMPLATES = ["The current president of the US is ", # Donald Trump, as of 2025
              "The previous Nobel Prize in Physics went to ", # John J. Hopfield and Geoffrey Hinton in 2024
              "The previous president of the US is ", # Joe Biden, as of 2025
              "The previous Olympics took place at ", # Paris France, in 2024
+             "The most recent Best Picture winner at the Oscars is ", # Oppenheimer, as of 2024
+             "The current Prime Minister of the UK is ", # Keir Starmer, as of 2024
+             "The current CEO of Twitter is ", # Elon Musk, as of 2025
+             "The latest version of macOS is ", # macOS 15 Sequoia, as of 2024
             ]
 
 # TODO: generate more prompts by sweeping over...
