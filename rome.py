@@ -56,7 +56,7 @@ colors={
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
 
-model_name = "allenai/OLMo-1B-hf"  # autoregressive model 
+model_name = "meta-llama/Llama-3.2-1B"  # autoregressive model 
 config = AutoConfig.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
