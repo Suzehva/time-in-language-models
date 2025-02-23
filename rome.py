@@ -20,6 +20,7 @@ from pyvene import (
 
 from torch import nn
 sm = nn.Softmax(dim=-1)
+lsm = nn.LogSoftmax(dim=-1)
 
 # %config InlineBackend.figure_formats = ['svg']
 import matplotlib as mpl
@@ -54,19 +55,18 @@ colors={
     "attention_output": "Reds"
 } 
 
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 # MODEL SETUP
-
 model_name = "meta-llama/Llama-3.2-1B"  # autoregressive model 
 config = AutoConfig.from_pretrained(model_name)
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 
 
-##  VERSION 1 FACTUAL RECALL 
-# '''
+##  PART 1: FACTUAL RECALL 
+'''
 base = "The Space Needle is in downtown"
 inputs = [tokenizer(base, return_tensors="pt").to(device),]
 res = model(**inputs[0])
@@ -77,17 +77,22 @@ logits = res.logits[0, -1, :]  # Get the last token's logits (for "downtown")
 distrib = sm(res.logits) 
 
 top_vals(tokenizer, distrib[0, -1], n=10)
-# '''
+'''
 
 
-
-
-# NOTES (TODO)
-# 1. part 1 works for both olmo and llama
-# 2. it seems like hidden states are not accessible at all for olmo, and the structure of 
-#   the library makes it difficult to access hidden states for llama. so part 2 needs some work
-
-##  VERSION 2 CORRUPTED RUN
+##  PART 2: CORRUPTED RUN
+# slightly working...
+        # Intervention key: layer_0_comp_block_input_unit_pos_nunit_1#0
+        # _and                 0.09548791497945786
+        # _is                  0.06283295899629593
+        # _downtown            0.0499887578189373
+        # _in                  0.04853437840938568
+        # _department          0.030326135456562042
+        # _right               0.016650980338454247
+        # _are                 0.014145351946353912
+        # _city                0.013409560546278954
+        # _today               0.010750866495072842
+        # _world               0.009167429059743881
 
 class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
     def __init__(self, embed_dim, **kwargs):
@@ -95,28 +100,16 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
         self.interchange_dim = embed_dim
         rs = np.random.RandomState(1)
         prng = lambda *shape: rs.randn(*shape)
-        second_dim = 4  # tried 7 and it kinda worked...
-        self.noise = torch.from_numpy(prng(1, second_dim, embed_dim)).to(device) 
+        self.noise = torch.from_numpy(
+            prng(1, 4, embed_dim)).to(device)
         self.noise_level = 0.13462981581687927
 
-    def forward(self, base, source=None, subspaces=None):   
-        print("Base shape:", base.shape)
-        print("Noise shape:", self.noise.shape)
-        print("Interchange dim:", self.interchange_dim)
-        
-        noise = self.noise
-        if self.noise.shape[1] < base.shape[1]:
-            self.noise = self.noise.expand(-1, base.shape[1], -1)  # IDK if this might mess stuff up TODO
-        # if base.shape[1] != noise.shape[1]:
-            # noise = noise.expand(base.shape[0], base.shape[1], base.shape[2])
-        base[..., : self.interchange_dim] += noise * self.noise_level
-        
-        # base[..., : self.interchange_dim] += self.noise * self.noise_level
+    def forward(self, base, source=None, subspaces=None):
+        base[..., : self.interchange_dim] += self.noise * self.noise_level
         return base
 
     def __str__(self):
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
-    
 
 def corrupted_config(model_type):
     config = IntervenableConfig(
@@ -127,55 +120,45 @@ def corrupted_config(model_type):
                 "block_input",  # intervention type
             ),
         ],
-        intervention_types = NoiseIntervention,
+        intervention_types=NoiseIntervention,
     )
     return config
 
+gpt=model
+base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
+config = corrupted_config(type(gpt))
+config.output_hidden_states = True # aditi addition
+config.last_hidden_state = True
+
+intervenable = IntervenableModel(config, gpt)
+
+_, counterfactual_outputs = intervenable(
+    base, unit_locations={"base": ([[[0, 1, 2, 3]]])}
+)
+# get the LAST hidden state. modified line 1952 and 1953 in intervenable_base.py (imported file) like so:
+#    if 'output_hidden_states' in self.model.config:  # aditi addition 
+#        model_kwargs["output_hidden_states"] = True  # aditi addition 
+#    icounterfactual_outputs = self.model(**base, **model_kwargs)
+
+last_hidden_state = counterfactual_outputs.hidden_states[-1]
+
+def embed_to_distrib_aditi(model, embed, log=False, logits=False):
+    """Convert an embedding to a distribution over the vocabulary"""
+    if "gpt2" in model.config.architectures[0].lower():
+        with torch.inference_mode():
+            vocab = torch.matmul(embed, model.wte.weight.t())
+    elif "llama" in model.config.architectures[0].lower():  ## llama case modified by aditi
+        with torch.inference_mode():
+            vocab = torch.matmul(embed, model.lm_head.weight.t()) ## equivalent of GPT's model.wte
+    else:
+        raise ValueError("Unsupported model architecture")
+
+    if logits:
+        return vocab
+    return lsm(vocab) if log else sm(vocab)
+
+distrib = embed_to_distrib_aditi(gpt, last_hidden_state, logits=False)
+top_vals(tokenizer, distrib[0][-1], n=10)
 
 
-
-# version 1
-
-# base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
-
-# config = corrupted_config(type(model))
-# config.output_hidden_states = True  
-
-# intervenable = IntervenableModel(config, model)
-
-# # _, counterfactual_outputs = intervenable(
-# #     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}
-# # )
-# _, counterfactual_outputs = intervenable(
-#     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}, output_hidden_states=True
-# )
-
-# hidden_states = counterfactual_outputs.hidden_states
-# print("HIDDEN STATES   ", hidden_states)
-# print(f"Hidden state shape per layer: {hidden_states.shape}")  # (batch, seq_len, hidden_dim)
-
-# # distrib = embed_to_distrib(model, counterfactual_outputs.last_hidden_state, logits=False)
-# # res = model(**intervenable)
-# res = intervenable(base)
-# # print(res)
-# res = res[1]
-# logits = res.logits[0, -1, :]  # Get the last token's logits (for "downtown")
-# distrib = sm(res.logits) 
-
-# top_vals(tokenizer, distrib[0][-1], n=10)
-
-
-# version 2
-
-# base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
-# config = corrupted_config(type(model))
-# config.output_hidden_states = True
-# intervenable = IntervenableModel(config, model)
-# _, counterfactual_outputs = intervenable(
-
-#     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}, output_hidden_states=True
-# )
-
-# distrib = embed_to_distrib(model, counterfactual_outputs.last_hidden_state, logits=False)
-# top_vals(tokenizer, distrib[0][-1], n=10)
 
