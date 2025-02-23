@@ -5,7 +5,6 @@
 
 
 # input format: list of   (prompt, [solns])
-
 TEMPLATES = [("The year is 1950. The current president of the United States is ", ["Harry Truman"]),
              
 ]
