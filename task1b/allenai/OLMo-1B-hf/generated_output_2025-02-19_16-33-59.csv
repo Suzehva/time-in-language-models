@@ -1,0 +1,9 @@
+model,input_text,generated_token
+allenai/OLMo-1B-hf,The current president of the US is, a man who has been
+allenai/OLMo-1B-hf,The next Olympics will take place at, the end of the year
+allenai/OLMo-1B-hf,The newest COVID variant is, more contagious than the
+allenai/OLMo-1B-hf,The latest iPhone model is," the iPhone 11, which"
+allenai/OLMo-1B-hf,The most recent FIFA World Cup winner is," the United States, who"
+allenai/OLMo-1B-hf,The previous Nobel Prize in Physics went to, the American physicist Richard Fe
+allenai/OLMo-1B-hf,The previous president of the US is, a man who has been
+allenai/OLMo-1B-hf,The previous Olympics took place at, the same time as the
