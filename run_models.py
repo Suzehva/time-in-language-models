@@ -165,9 +165,69 @@ class MultiModelManager:
                     writer.writerow(row)  # Assume it's a list/tuple and write directly
 
         print(f"Generated data has been saved to {output_filepath}.")
+        return output_filepath
+
+def run_task_1a():
+    max_new_tokens = 1
+    input_data_path = 'task1a/task1a.data'
+
+def run_task_1b():
+    max_new_tokens = 5
+    input_data_path = 'task1b/task1b.data'
+
+def run_task_1c():
+    max_new_tokens = 10
+    input_data_path = 'task1c/task1c.data'
+
+def run_task_1d():
+    max_new_tokens = 10
+    input_data_path = 'task1d/task1d.data'
+
+def run_task_2a(manager, model_id):
+    max_new_tokens = 10
+    input_data_path = 'task2a/task2a.data'
+    solns_data_path = 'task2a/task2a-with-solns.data'
+    # get next token generation and its logits
+    generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=1) # only generate 1 token
+    generated_path = manager.store_output_to_csv(generated_texts, "task1a/" + model_id)
+    
+    return generated_path, solns_data_path
+
+def test_task_2a(manager, generated_path, solns_path):
+    
+    
+    pass
+
+
+def run_task_2b():
+    max_new_tokens = 10
+    input_data_path = 'task2b/task2b.data'
+    
+
+
+# ADITI's IMPLM OF MAIN
+def main():
+    model_ids = [
+        "meta-llama/Llama-3.2-1B",
+        "allenai/OLMo-1B-hf",
+        # "google/gemma-2-2b"
+    ]
+    
+    # Create the MultiModelManager instance
+    manager = MultiModelManager()
+
+    for model_id in model_ids:
+        manager.load_model(model_id)
+
+        # task-specific
+        gen, soln = run_task_2a(manager, model_id)
+        test_task_2a(manager, gen, soln)
 
 
 
+
+# SUZE's IMPLM OF MAIN
+'''
 def main():
     model_ids = [
         "meta-llama/Llama-3.2-1B",
@@ -230,7 +290,15 @@ def main():
             
 
         
-        
+     '''
+
+if __name__ == "__main__":
+    main()
+
+
+
+
+   
         # for task, max_new_tokens in tasks.items():
         #     # generate next token(s) from a file of prompts
         #     task_prompts = task + "/" + task + ".data"  # eg. task1a/task1a.data
@@ -243,7 +311,4 @@ def main():
         #     # store generated output to file TURNED OF FOR DEBUGGING
         #     file = task + "/" + model_id
         #     manager.store_output_to_csv(generated_texts, file) # it automatically saves to the model's output folder
-
-if __name__ == "__main__":
-    main()
 
