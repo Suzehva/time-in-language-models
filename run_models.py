@@ -32,6 +32,39 @@ class MultiModelManager:
         else:
             print(f"Model {model_id} already loaded.")
     
+    def generate_text_from_file_simple(self, model_id: str, filename: str, max_new_tokens):
+        """
+        Reads input text from a file, generates one token per input, and returns structured data.
+
+        :param model_id: The model ID being used
+        :param filename: The file containing input texts
+        :return: List of tuples (model_id, input_text, generated_token)
+        """
+        if model_id not in self.models:
+            raise ValueError(f"Model {model_id} is not loaded yet. Please load it first.")
+
+        model = self.models[model_id]
+        tokenizer = self.tokenizers[model_id]
+
+        generated_data = []  # List of tuples (model_id, input_text, generated_token)
+
+        with open(filename, "r") as file:
+            for line in file:
+                input_text = line.strip()
+                if input_text:
+                    inputs = tokenizer(input_text, return_tensors="pt").to(self.device)
+                    
+                    # Generate only 1 token
+                    output = model.generate(**inputs, max_new_tokens=max_new_tokens)
+                    
+                    # Decode only the newly generated token
+                    generated_token = tokenizer.decode(output[0][-max_new_tokens:], skip_special_tokens=True)
+
+                    # Store structured data (model, input, output)
+                    generated_data.append((model_id, input_text, generated_token))
+
+        return generated_data  # Return structured data
+
     def generate_text_from_file(self, model_id: str, filename: str, max_new_tokens):
         """
         Reads input text from a file, generates one token per input, and returns structured data.
@@ -188,22 +221,62 @@ def run_task_2a(manager, model_id):
     input_data_path = 'task2a/task2a.data'
     solns_data_path = 'task2a/task2a-with-solns.data'
     # get next token generation and its logits
-    generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=1) # only generate 1 token
-    generated_path = manager.store_output_to_csv(generated_texts, "task1a/" + model_id)
+    generated_texts = manager.generate_text_from_file_simple(model_id=model_id, filename=input_data_path, max_new_tokens=max_new_tokens) 
+    generated_path = manager.store_output_to_csv(generated_texts, "task2a/" + model_id)
     
     return generated_path, solns_data_path
 
-def test_task_2a(manager, generated_path, solns_path):
-    
-    
-    pass
 
+import pandas as pd
+def test_task_2a(generated_path, solns_path, model_id, manager):
+    
+    # Load solns
+    solutions_dict = {}
+    with open(solns_path, "r") as file:
+        for line in file:
+            if "," in line:
+                prompt, expected_answer = line.rsplit(",", 1)  # Split at last comma
+                solutions_dict[prompt.strip()] = expected_answer.strip()
+    
+    # Load the AI-generated CSV
+    df = pd.read_csv(generated_path)
+    print(df.columns)
+    # Convert to dictionary { input_text: generated_token }
+    # column_1 = model column_2 = input text, column_3 = gen token
+    model_dict = dict(zip(df["column_2"], df["column_3"]))
+
+    print('SOLNS DICT\n\n' , solutions_dict)
+    print('MODEL DICT\n\n' , model_dict)
+    # Function to compare answers
+    def evaluate_answers(solutions_dict, model_dict):
+        results = []
+        for prompt, expected in solutions_dict.items():
+            generated = model_dict.get(prompt, "N/A")
+            
+            # ADITI!! TODO continue here
+
+            expected_tokens = expected.lower().split()
+            generated_lower = generated.lower()
+            match = any(token in generated_lower for token in expected_tokens)
+            if match:
+                match_status = "🟢 Match"
+            else:
+                match_status = "🔴 Incorrect"
+        
+            results.append((prompt, expected, generated, match_status))
+    
+        return pd.DataFrame(results, columns=["Prompt", "Expected", "Generated", "Status"])
+
+    # Run evaluation
+    report = evaluate_answers(solutions_dict, model_dict)
+
+    # Save or display report
+    manager.store_output_to_csv(report, "task2a/" + model_id + "_report")
 
 def run_task_2b():
     max_new_tokens = 10
     input_data_path = 'task2b/task2b.data'
     
-
 
 # ADITI's IMPLM OF MAIN
 def main():
@@ -221,7 +294,7 @@ def main():
 
         # task-specific
         gen, soln = run_task_2a(manager, model_id)
-        test_task_2a(manager, gen, soln)
+        test_task_2a(gen, soln, model_id, manager)
 
 
 
