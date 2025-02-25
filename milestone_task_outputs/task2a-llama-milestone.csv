@@ -1,0 +1,12 @@
+Prompt,Expected,Generated,Status
+The president of the US during the invention of the telephone was,Ulysses Grant,""":",🔴 Incorrect
+The president of the US 10 years before John F. Kennedy was,Harry Truman,""" assassinated",🔴 Incorrect
+"When Hawaii officially became a state, the largest country in the world was",Soviet Union," the United States of America. Now, we have the most populous country in the world, the United States of America. Now",🔴 Incorrect
+The president of the US when the Wright brothers first flew was,Theodore Roosevelt, Theodore Roosevelt. I wonder if he would have been impressed by the first flight of a drone by the US Air Force. It,🟢 Match
+"When the Titanic sank, the reigning monarch of the United Kingdom was",George V, King George V. The Titanic was a British-built passenger liner that was the largest and most luxurious ship of her day. She,🟢 Match
+"When the Great Fire of London happened, the most powerful empire in the world was",Ottoman Empire," on its knees. The king was on his deathbed, and the queen was pregnant with a child that would be the future",🔴 Incorrect
+"When the Eiffel Tower was completed, the most populous country in the world was",China," France. Now, after 120 years, the tower is a global icon. It is a symbol of Paris and France,",🔴 Incorrect
+"The dominant religion in India 1,000 years ago was",Hinduism,""" Hinduism. Today, the dominant religion is Hinduism and Islam.",🟢 Match
+"When the Great Wall of China was first built, the dominant empire in the world was",Achaemenid Neo-Assyrian Median Empire," the Roman Empire. But when the Great Wall was built, the dominant empire in the world was the Chinese Empire. The Chinese",🟢 Match
+"When Gandhi led the Salt March, the most populous country in the world was",China," India. The country was ruled by a British colonial power, but Gandhi was determined to bring the country into the modern world.",🔴 Incorrect
+"When paper money was first used in China, the primary form of currency in Europe was",Gold silver coins," the silver coin. When paper money was first used in the United States, the primary form of currency in Europe was the silver",🟢 Match

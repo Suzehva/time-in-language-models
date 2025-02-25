@@ -1,0 +1,26 @@
+Prompt|Expected|Generated|Status
+The year is 1838. The current president of the United States is|Martin Van Buren| a man named James Madison. He is a man who has been in office for a little over a year. He is a|🔴 Incorrect
+The year is 1870. The current president of the United States is|Ulysses Grant| a man named Abraham Lincoln. The United States is in the midst of a civil war. The country is divided into two parts|🔴 Incorrect
+The year is 1914. The current president of the United States is|Woodrow Wilson| Woodrow Wilson. The United States is at war with Germany. The United States is at war with Japan. The United States|🟢 Match
+The year is 1950. The current president of the United States is|Harry Truman| Harry S. Truman. The United States is still recovering from the Great Depression. The United States is still recovering from World War|🟢 Match
+The year is 1975. The current president of the United States is|Gerald Ford| Gerald Ford. The United States is in the midst of a massive economic recession. The economy is in shambles, and|🟢 Match
+The year is 2015. The current president of the United States is|Barack Obama| Donald Trump. The United States is in the midst of a trade war with China. The United States is in the midst of|🔴 Incorrect
+The year is 1950. The next Summer Olympics will take place in the city of|Helsinki Finland|""" Melbourne, Australia."|🔴 Incorrect
+The year is 1960. The current Summer Olympics will take place in the city of|Rome Italy|""" Rome. The United States is the dominant power in the world, and the Cold War is in full swing."|🟢 Match
+The year is 1970. The next Summer Olympics will take place in the city of|Munich West Germany| Munich. The city is in the midst of a massive rebuilding project. The Olympic Village is being built. The city is in|🟢 Match
+The year is 1979. The previous Summer Olympics had taken place in the city of|Montreal Canada| Moscow, Russia. The Soviet Union was in the midst of a political crisis, and the country was in the midst of a|🔴 Incorrect
+The year is 1998. The next Summer Olympics will take place in the city of|Sydney Australia in 2000|""" Atlanta, Georgia. The United States is the host nation."|🔴 Incorrect
+The year is 2006. The next Summer Olympics will take place in the city of|Beijing China in 2008|""" London."|🔴 Incorrect
+The year is 2017. The previous Summer Olympics will take place in the city of|Rio de Janeiro Brazil in 2016|""" Rio de Janeiro, Brazil. The Summer Olympics will be held from August 5 to 21, 2017."|🟢 Match
+The year is 2028. The current Summer Olympics will take place in the city of|LA USA Los Angeles United States|""" Los Angeles. The United States is the host nation."|🟢 Match
+The year is 1950. The current prime minister of the Netherlands is|Willem Drees| Jan Peter Balkenende. The country is still recovering from the Second World War. The Netherlands is still recovering from the Second|🔴 Incorrect
+The year is 1975. The current prime minister of the Netherlands is|Joop den Uyl| Jan Peter Balkenende. The Netherlands is a member of the European Economic Community (EEC). The Netherlands is a member|🔴 Incorrect
+The year is 2015. The current prime minister of the Netherlands is|Mark Rutte|""" Mark Rutte."|🟢 Match
+The year is 1975. The current prime minister of India is|Indira Gandhi| Indira Gandhi. The country is still in the process of developing its economy. The country is still in the process of developing|🟢 Match
+The year is 2006. The current prime minister of India is|Manmohan Singh| Manmohan Singh. The current president of India is Pratibha Patil. The current prime minister of Pakistan is|🟢 Match
+The year is 1953. This year's winner of the Formula 1 Grand Prix is|Alberto Ascari|""" the British driver, James Hunt."|🔴 Incorrect
+The year is 1968. This year's winner of the Formula 1 Grand Prix is|Graham Hill|""" the McLaren M23."|🔴 Incorrect
+The year is 1983. This year's winner of the Formula 1 Grand Prix is|Nelson Piquet|""" the British driver James Hunt."|🔴 Incorrect
+The year is 1999. This year's winner of the Formula 1 Grand Prix is|Mika Häkkinen|""" the McLaren MP4/4."|🔴 Incorrect
+The year is 2003. This year's winner of the Formula 1 Grand Prix is|Michael Schumacher|""" the McLaren MP4-12C."|🔴 Incorrect
+The year is 2017. This year's winner of the Formula 1 Grand Prix is|Lewis Hamilton|""" the Mercedes-AMG Petronas F1 Team."|🔴 Incorrect
