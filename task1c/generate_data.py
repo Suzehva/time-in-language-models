@@ -19,7 +19,7 @@ OBJECTS = ["Wi-Fi", "washboards", "The Knickerbocker Trust Company", "COVID", "t
 PHRASING = ["Tell me about ", "Explain to me, what is ", "What is ", "Today I learned about ", 
            "I'd like to know more about ", "Give me an overview of ", "Share some insights on ", 
            "Can you tell me about ", "I'd love to learn more about ", "Help me understand ", 
-           "I'm curious about ", "Give me an overview of "] # NOTE: IF YOU CHANGE AMOUNT OF THIS, BE CAREFUL, THINK TWICE
+           "I'm curious about ", "Give me an overview of "] 
 
 # TODO get hidden state of last token (logits) and compare to all years' embeddings
 # gemma might have split all years into digits (decode the year) but other models would likely have the entire year as tokens
@@ -30,7 +30,7 @@ def generate_task1c(objs, phrasing):
     with open('task1c/task1c.data', 'w', newline='',) as file:
         for obj in objs:
             for phrase in phrasing:
-                prompt = phrase + obj + ". The year is "
+                prompt = phrase + obj + ". The year is " + ",,," + obj
                 file.write(prompt + "\n")
     
 if __name__ == "__main__":
