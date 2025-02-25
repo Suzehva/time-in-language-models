@@ -9,7 +9,7 @@ TEMPLATES = ["In [[YEAR]] there ", "In [[YEAR]], they ",
              "As of [[YEAR]], it ", "In [[YEAR]], after the school bell, he "]
 
 START_YEAR = 1950 # note: if you change start or end year, you have to change it in the plot code as well 
-END_YEAR = 2050
+END_YEAR = 2100
 
 def generate_task1a(start_year:int, end_year:int, templates):
     with open('task1a/task1a.data', 'w', newline='',) as file:

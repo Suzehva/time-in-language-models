@@ -4,8 +4,8 @@ import os
 import datetime
 import csv
 import matplotlib.pyplot as plt
+import math
 import numpy as np
-import pandas as pd
 from typing import List, Tuple
 import re
 
@@ -69,7 +69,7 @@ class MultiModelManager:
 
         return generated_data  # Return structured data
 
-    def generate_text_from_file(self, model_id: str, filename: str, max_new_tokens, years_included=False):
+    def generate_text_from_file(self, model_id: str, filename: str, max_new_tokens, prefix_included=False):
         """
         Reads input text from a file, generates one token per input, and returns structured data.
 
@@ -90,8 +90,9 @@ class MultiModelManager:
                 input_text = line.strip()
                 parts = input_text.split(',,,')
                 
-                input_year = parts[1].strip()
-                input_text = parts[0].strip()
+                if prefix_included:
+                    input_prefix = parts[1].strip()
+                    input_text = parts[0].strip()
 
                 if input_text:
                     inputs = tokenizer(input_text, return_tensors="pt").to(self.device)
@@ -128,22 +129,12 @@ class MultiModelManager:
                             break
                 generated_text = tokenizer.decode(generated_tokens, skip_special_tokens=True)
                 # token_logits is an array where every entry has all the logits for one token generated. Every entry has 128256 numbers, which is the size of our vocab
-                if years_included:
-                    generated_data.append((model_id, input_year, input_text, generated_text, token_logits))
+                if prefix_included:
+                    generated_data.append((model_id, input_prefix, input_text, generated_text, token_logits))
                 else:
                     generated_data.append((model_id, input_text, generated_text, token_logits))
-
-                # IN CASE YOU WANT TO USE MODEL.GENERATE
-                #inputs = tokenizer(input_text, return_tensors="pt").to(self.device)
-                #generate_output = model.generate(**inputs, max_new_tokens=max_new_tokens, num_beams=1, do_sample=False, top_k=0, top_p=1.0, temperature=1.0, no_repeat_ngram_size=0)
-                #generate_output = tokenizer.decode(generate_output[0][-max_new_tokens:], skip_special_tokens=True)
-
-                # notes
-                # attach the expected output to input prompt and use the forward pass to find its probability  (teacher forcing)
-                # use probability distr instead of top token
-                # track probabiliy change across is/was/will/etc
-
         return generated_data
+
 
     def learn_relevant_vocab(self, model_id: str, words_of_interest:str):
         """
@@ -211,9 +202,9 @@ class MultiModelManager:
         return output_filepath
 
     def create_probability_plots_1a(self, task1a_result: List[Tuple[str, int, str, str, List[Tuple[str, float, float]]]],
-                                output_dir: str, plot_softmax=True):
+                                output_dir: str):
             """
-            Create separate plots for each sweep of years from 1950-2050 in the task1a_result data.
+            Create separate plots for each sweep of years from 1950-2100 in the task1a_result data.
             
             Args:
                 task1a_result: List of tuples containing 
@@ -250,9 +241,9 @@ class MultiModelManager:
             
             # Create a plot for each sweep
             for sweep_idx, sweep_data in enumerate(sweeps):
-                self.create_sweep_plot(sweep_data, sweep_idx, output_dir, plot_softmax=plot_softmax)
+                self.create_sweep_plot(sweep_data, sweep_idx, output_dir)
 
-    def create_sweep_plot(self, sweep_data, sweep_idx, output_dir, plot_softmax):
+    def create_sweep_plot(self, sweep_data, sweep_idx, output_dir):
         """Create a plot for a single sweep of the year range."""
         # Initialize word probability data
         word_probs = {}
@@ -263,19 +254,10 @@ class MultiModelManager:
             years.append(input_year)
             
             # Store probabilities for each word
-            if plot_softmax:
-                for word, _, prob in relevant_words_logits:
-                    if word not in word_probs:
-                        word_probs[word] = []
-                    word_probs[word].append(prob)
-            else:
-                # plot raw digits
-                for word, raw, _ in relevant_words_logits:
-                    if word not in word_probs:
-                        word_probs[word] = []
-                    word_probs[word].append(raw)
-
-        
+            for word, _, prob in relevant_words_logits:
+                if word not in word_probs:
+                    word_probs[word] = []
+                word_probs[word].append(prob)
         # Sort years and corresponding probabilities to ensure proper ordering
         sorted_indices = np.argsort(years)
         years = [years[i] for i in sorted_indices]
@@ -294,22 +276,17 @@ class MultiModelManager:
         
         # Customize the plot
         plt.xlabel('Year')
-        plt.ylabel('Logit softmaxed relative to other verbs')
+        plt.ylabel('Logits softmaxed relative to others')
         input_text_general = re.sub(r'\b\d{4}\b', '[year]', input_text)
         plt.title(f'Word Probabilities Over Time - prompt: {input_text_general} - model: {model_id}')
         plt.grid(True, linestyle='--', alpha=0.7)
         plt.legend()
         
         # Set x-axis ticks with appropriate intervals
-        if len(years) > 20:
-            # If we have many years, show every 5th or 10th year
-            step = max(1, len(years) // 10)
-            tick_positions = years[::step]
-            plt.xticks(tick_positions, rotation=45)
-        else:
-            # If we have fewer years, show all of them
-            plt.xticks(years, rotation=45)
-        
+        step = max(1, len(years) // 10)
+        tick_positions = years[::step]
+        plt.xticks(tick_positions, rotation=45)
+
         # Adjust layout to prevent label cutoff
         plt.tight_layout()
         
@@ -320,21 +297,220 @@ class MultiModelManager:
         plt.savefig(filepath, dpi=300, bbox_inches='tight')
         print(f"Created plot for sweep {sweep_idx+1}: {filepath}")
 
-def run_task_1a():
-    max_new_tokens = 1
+def run_task_1a(manager, model_id):
     input_data_path = 'task1a/task1a.data'
+
+    # get next token generation and its logits
+    generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=1, years_included=True) # only generate 1 token
+    #manager.store_output_to_csv(generated_texts, "task1a/" + model_id)
+
+    # get indices of words we care about 
+    relevant_words = ["was", "will", "is", "were", "are"]
+    relevant_words_info = manager.learn_relevant_vocab(model_id=model_id, words_of_interest=relevant_words)
+
+    # for every entry, get list of logits for the relevant words
+    task1a_result = []
+    task1a_result_total = {}
+    task1a_result_total_list = []
+    # has tuples with model_id, input text, generated text, list of tuples where (word, logits, logits_softmaxed)
+    for _, input_year_from_entry, input_text_from_entry, generated_text_from_entry, token_logits_from_entry in generated_texts:
+        if input_year_from_entry not in task1a_result_total:
+            task1a_result_total[input_year_from_entry] = {}
+            task1a_result_total[input_year_from_entry]['was/were'] = 0
+            task1a_result_total[input_year_from_entry]['is/are'] = 0
+            task1a_result_total[input_year_from_entry]['will'] = 0
+            task1a_result_total[input_year_from_entry]['was/were_soft'] = 0
+            task1a_result_total[input_year_from_entry]['is/are_soft'] = 0
+            task1a_result_total[input_year_from_entry]['will_soft'] = 0
+
+
+        # compute list of relevant logits using token_ids; only one token necessary
+        relevant_words_logits = []
+        for word, _, token_ids in relevant_words_info:
+            logits = token_logits_from_entry[0][token_ids[0]]
+            relevant_words_logits.append((word, logits))
+        
+        # Extract logits and apply softmax
+        raw_logits = np.array([logit for _, logit in relevant_words_logits])
+        softmaxed_logits = np.exp(raw_logits) / np.sum(np.exp(raw_logits))
+
+        # Combine the logits for "was" and "were", and "is" and "are"
+        combined_logits = {}
+        for word, raw_logit, softmaxed_logit in zip([w[0] for w in relevant_words_logits], raw_logits, softmaxed_logits):
+            if word in ['was', 'were']:
+                combined_word = 'was/were'
+                if combined_word not in combined_logits:
+                    combined_logits[combined_word] = {'raw': 0, 'softmax': 0}
+                combined_logits[combined_word]['raw'] += raw_logit
+                combined_logits[combined_word]['softmax'] += softmaxed_logit
+                task1a_result_total[input_year_from_entry][combined_word] += raw_logit
+
+            elif word in ['is', 'are']:
+                combined_word = 'is/are'
+                if combined_word not in combined_logits:
+                    combined_logits[combined_word] = {'raw': 0, 'softmax': 0}
+                combined_logits[combined_word]['raw'] += raw_logit
+                combined_logits[combined_word]['softmax'] += softmaxed_logit
+                task1a_result_total[input_year_from_entry][combined_word] += raw_logit
+            else:
+                # Keep other words as they are
+                if word not in combined_logits:
+                    combined_logits[word] = {'raw': 0, 'softmax': 0}
+                combined_logits[word]['raw'] += raw_logit
+                combined_logits[word]['softmax'] += softmaxed_logit
+                task1a_result_total[input_year_from_entry][word] += raw_logit
+            
+        # Process the combined logits to compute averages for "softmaxed_logit" --> fo one year entry!
+        final_relevant_words_logits = [
+            (word, 
+            combined_data['raw'].item(), 
+            combined_data['softmax'].item())
+            for word, combined_data in combined_logits.items()
+        ]
+        # Add the updated relevant words logits with combined results to the task1a_result list
+        task1a_result.append((model_id, input_year_from_entry, input_text_from_entry, generated_text_from_entry, final_relevant_words_logits))
+    # task1a_result will now contain the updated list with combined logits for "was/were" and "is/are"
+    manager.store_output_to_csv(task1a_result, "task1a/" + model_id + "_logits")
+    manager.create_probability_plots_1a(task1a_result, "task1a/")
+
+    for year, _ in task1a_result_total.items():
+        arr_to_softmax = [task1a_result_total[year]['was/were'], task1a_result_total[year]['is/are'], task1a_result_total[year]['will'] ]
+        exp_logits = np.exp(arr_to_softmax)
+        softmaxed_logits = exp_logits / np.sum(exp_logits)
+        task1a_result_total[year]['was/were_soft'], task1a_result_total[year]['is/are_soft'], task1a_result_total[year]['will_soft'] = softmaxed_logits[0], softmaxed_logits[1], softmaxed_logits[2]
+    for year, d in task1a_result_total.items():
+        final_relevant_words_logits_total = [
+            ('was/were', d['was/were'].item(), d['was/were_soft'].item()), ('is/are', d['is/are'].item(), d['is/are_soft'].item()), ('will', d['will'].item(), d['will_soft'].item())
+        ]
+        task1a_result_total_list.append((model_id, year, "[all prompts]", "-", final_relevant_words_logits_total))
+    manager.create_probability_plots_1a(task1a_result_total_list, "task1a/")
+
+
 
 def run_task_1b():
     max_new_tokens = 5
     input_data_path = 'task1b/task1b.data'
+    # TODO: add code
 
-def run_task_1c():
-    max_new_tokens = 10
+def run_task_1c(manager, model_id):
+    START_YEAR, END_YEAR = 1400, 2201
+    
     input_data_path = 'task1c/task1c.data'
+
+    # get next token generation and its logits
+    generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=2, prefix_included=True) # only generate 2 tokens; allen uses two tokens
+
+    # get indices of words we care about 
+    relevant_words = [str(year) for year in range(START_YEAR, END_YEAR)]
+    relevant_words_info = manager.learn_relevant_vocab(model_id=model_id, words_of_interest=relevant_words)
+
+    relevant_ppls = {}
+    for _, object_from_entry, input_text_from_entry, generated_text_from_entry, token_logits_from_entry in generated_texts:
+        token_probabilities_from_entry = np.exp(token_logits_from_entry) / np.sum(np.exp(token_logits_from_entry))
+
+        #print(relevant_words_info)
+        for year, _, token_ids in relevant_words_info:
+            PPL = 0
+            if model_id == "meta-llama/Llama-3.2-1B":
+                # this one splits up e.g. "2024" as "202" and "4" so we need to get both tokens TODO check this
+                # using formula from here: https://huggingface.co/docs/transformers/perplexity (without 1/t factor since all years have same number of tokens)
+                PPL = math.exp(-(math.log(token_probabilities_from_entry[0][token_ids[0]]) + math.log(token_probabilities_from_entry[1][token_ids[1]])))
+            elif model_id == "allenai/OLMo-1B-hf":
+                # this one does not split up years
+                PPL = math.exp(-math.log(token_probabilities_from_entry[0][token_ids[0]]))
+            else:
+                raise Exception(f"model {model_id} not supported")
+            if not object_from_entry in relevant_ppls:
+                relevant_ppls[object_from_entry] = [[] for _ in range(END_YEAR - START_YEAR)]
+            relevant_ppls[object_from_entry][int(year) - START_YEAR].append(PPL)
+
+    relevant_ppls_avg = {}
+    #print(relevant_ppls)
+    #raise Exception(f"debug")
+    # take average PPL across prompts for every year
+    for obj, years_2d_arr in relevant_ppls.items():
+        if obj not in relevant_ppls_avg:
+            relevant_ppls_avg[obj] = [0] * (END_YEAR - START_YEAR)
+        for i, years in enumerate(years_2d_arr):
+            ppl_year = sum(years) / len(years)
+            relevant_ppls_avg[obj][i] = ppl_year
+        #print(relevant_ppls_avg[obj])
+        #raise Exception(f"debug")
+    # print(relevant_ppls.keys())
+    # print(relevant_ppls_avg.keys())
+    # raise Exception(f"debug")
+
+        
+        
+    def create_probability_plots_1c(ppls_across_years: List[int], obj:str, start_year: int, output_dir: str):
+        pass
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir)
+        years = [start_year + i for i in range(len(ppls_across_years))]
+        plt.figure(figsize=(14, 8))
+
+        plt.bar(years, ppls_across_years, color='skyblue', edgecolor='navy', alpha=0.7)
+
+        # Customize the plot
+        plt.xlabel('Year', fontsize=12)
+        plt.ylabel('Perplexity (PPL)', fontsize=12)
+        plt.title(f'Perplexity Values Over Time - {obj}', fontsize=14)
+        plt.grid(True, linestyle='--', alpha=0.5, axis='y')
+        
+        # Check if we should use log scale (if values span multiple orders of magnitude)
+        if max(ppls_across_years) / (min(ppls_across_years) + 1e-10) > 100:
+            plt.yscale('log')
+            plt.ylabel('Perplexity (PPL) - Log Scale', fontsize=12)
+        
+        # Set x-axis ticks with appropriate intervals
+        year_range = len(years)
+        if year_range > 20:
+            # For a large range, show fewer ticks
+            step = max(1, year_range // 10)
+            plt.xticks(years[::step], rotation=45)
+        else:
+            plt.xticks(years, rotation=45)
+        
+        # Add annotations for min and max points
+        min_idx = np.argmin(ppls_across_years)
+        max_idx = np.argmax(ppls_across_years)
+        
+        plt.annotate(f'Min: {ppls_across_years[min_idx]:.2e}',
+                    xy=(years[min_idx], ppls_across_years[min_idx]),
+                    xytext=(0, 20),
+                    textcoords='offset points',
+                    ha='center',
+                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=.2'))
+        
+        plt.annotate(f'Max: {ppls_across_years[max_idx]:.2e}',
+                    xy=(years[max_idx], ppls_across_years[max_idx]),
+                    xytext=(0, 20),
+                    textcoords='offset points',
+                    ha='center',
+                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=.2'))
+        
+        # Adjust layout to prevent label cutoff
+        plt.tight_layout()
+        
+        # Save the plot
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{obj}_perplexity_plot_{timestamp}.png"
+        filepath = os.path.join(output_dir, filename)
+        plt.savefig(filepath, dpi=300, bbox_inches='tight')
+        print(f"Created perplexity plot '{obj}': {filepath}")
+        
+        # Close the figure to free memory
+        plt.close()
+    
+    
+    for obj, avg_across_years in relevant_ppls_avg:
+        manager.create_probability_plots_1c(avg_across_years, obj, START_YEAR, "task1c/")
+
 
 def run_task_1d():
     max_new_tokens = 10
     input_data_path = 'task1d/task1d.data'
+    # TODO: add code and change from last time
 
 def run_task_2a(manager, model_id):
     # define these constants for task 2a !!
@@ -359,7 +535,6 @@ def test_task_2a(generated_path, solns_path, model_id, manager):
                 prompt, expected_answer = line.rsplit("|", 1)
                 solutions_dict[prompt.strip()] = expected_answer.strip()
 
-    # Load the AI-generated CSV manually
     model_dict = {}
     with open(generated_path, "r") as file:
         lines = file.readlines()
@@ -444,13 +619,10 @@ def test_task_2b(generated_path, solns_path, model_id, manager):
     # Save or display report
     manager.store_output_to_csv(report, "task2a/" + model_id + "_report")
 
-
-
-# ADITI's IMPLM OF MAIN:
 def main():
     model_ids = [
-        "meta-llama/Llama-3.2-1B",
-        "allenai/OLMo-1B-hf",
+       "meta-llama/Llama-3.2-1B",
+        #"allenai/OLMo-1B-hf",
         #"google/gemma-2-2b"
     ]
     
@@ -460,152 +632,14 @@ def main():
     for model_id in model_ids:
         manager.load_model(model_id)
 
-        # task-specific code. should only have 2 lines here
-        gen, soln = run_task_2b(manager, model_id)
-        test_task_2b(gen, soln, model_id, manager)
-        
-
-
-# SUZE's IMPLM OF MAIN
-'''
-def main():
-    model_ids = [
-        "meta-llama/Llama-3.2-1B",
-        #"allenai/OLMo-1B-hf",
-        # "google/gemma-2-2b"
-    ]
-
-    # task : max num of new tokens (max_new_tokens)
-    # tasks = {  
-    #     "task1a":1,
-    #     "task1b":5,
-    #     "task1c":10,
-    #     "task1d":10
-    # }
-    
-    # Create the MultiModelManager instance
-    manager = MultiModelManager()
-
-    for model_id in model_ids:
-        # load model
-        manager.load_model(model_id)
-
         # task 1a:
-        input_data_path = 'task1a/task1a.data'
+        #run_task_1a(manager, model_id)
 
-        # get next token generation and its logits
-        generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=1, years_included=True) # only generate 1 token
-        #manager.store_output_to_csv(generated_texts, "task1a/" + model_id)
-
-        # get indices of words we care about 
-        relevant_words = ["was", "will", "is", "were", "are"]
-        relevant_words_info = manager.learn_relevant_vocab(model_id=model_id, words_of_interest=relevant_words)
-
-        # for every entry, get list of logits for the relevant words
-        task1a_result = []
-        task1a_result_total = {}
-        task1a_result_total_list = []
-        # has tuples with model_id, input text, generated text, list of tuples where (word, logits, logits_softmaxed)
-        for _, input_year_from_entry, input_text_from_entry, generated_text_from_entry, token_logits_from_entry in generated_texts:
-            if input_year_from_entry not in task1a_result_total:
-                task1a_result_total[input_year_from_entry] = {}
-                task1a_result_total[input_year_from_entry]['was/were'] = 0
-                task1a_result_total[input_year_from_entry]['is/are'] = 0
-                task1a_result_total[input_year_from_entry]['will'] = 0
-                task1a_result_total[input_year_from_entry]['was/were_soft'] = 0
-                task1a_result_total[input_year_from_entry]['is/are_soft'] = 0
-                task1a_result_total[input_year_from_entry]['will_soft'] = 0
+        run_task_1c(manager, model_id)
 
 
-            # compute list of relevant logits using token_ids
-            relevant_words_logits = []
-            for word, _, token_ids in relevant_words_info:
-                logits = 1
-                for i, token_id in enumerate(token_ids):
-                    # conditional probability so we multiply 
-                    logits *= token_logits_from_entry[i][token_id]
-                relevant_words_logits.append((word, logits))
-            
-            # Extract logits and apply softmax
-            raw_logits = np.array([logit for _, logit in relevant_words_logits])
-            softmaxed_logits = np.exp(raw_logits) / np.sum(np.exp(raw_logits))
-
-            # Combine the logits for "was" and "were", and "is" and "are"
-            combined_logits = {}
-            for word, raw_logit, softmaxed_logit in zip([w[0] for w in relevant_words_logits], raw_logits, softmaxed_logits):
-                if word in ['was', 'were']:
-                    combined_word = 'was/were'
-                    if combined_word not in combined_logits:
-                        combined_logits[combined_word] = {'raw': 0, 'softmax': 0}
-                    combined_logits[combined_word]['raw'] += raw_logit
-                    combined_logits[combined_word]['softmax'] += softmaxed_logit
-                    task1a_result_total[input_year_from_entry][combined_word] += raw_logit
-
-                elif word in ['is', 'are']:
-                    combined_word = 'is/are'
-                    if combined_word not in combined_logits:
-                        combined_logits[combined_word] = {'raw': 0, 'softmax': 0}
-                    combined_logits[combined_word]['raw'] += raw_logit
-                    combined_logits[combined_word]['softmax'] += softmaxed_logit
-                    task1a_result_total[input_year_from_entry][combined_word] += raw_logit
-                else:
-                    # Keep other words as they are
-                    if word not in combined_logits:
-                        combined_logits[word] = {'raw': 0, 'softmax': 0}
-                    combined_logits[word]['raw'] += raw_logit
-                    combined_logits[word]['softmax'] += softmaxed_logit
-                    task1a_result_total[input_year_from_entry][word] += raw_logit
-                
-            # Process the combined logits to compute averages for "softmaxed_logit" --> fo one year entry!
-            final_relevant_words_logits = [
-                (word, 
-                combined_data['raw'].item(), 
-                combined_data['softmax'].item())
-                for word, combined_data in combined_logits.items()
-            ]
-            # Add the updated relevant words logits with combined results to the task1a_result list
-            task1a_result.append((model_id, input_year_from_entry, input_text_from_entry, generated_text_from_entry, final_relevant_words_logits))
-        # task1a_result will now contain the updated list with combined logits for "was/were" and "is/are"
-        manager.store_output_to_csv(task1a_result, "task1a/" + model_id + "_logits")
-        manager.create_probability_plots_1a(task1a_result, "task1a/", plot_softmax=False)
-
-        #print(task1a_result_total) # this still has correct number but not when gone through softmax
-        for year, _ in task1a_result_total.items():
-            arr_to_softmax = [task1a_result_total[year]['was/were'], task1a_result_total[year]['is/are'], task1a_result_total[year]['will'] ]
-            exp_logits = np.exp(arr_to_softmax)
-            softmaxed_logits = exp_logits / np.sum(exp_logits)
-            # print(arr_to_softmax)
-            # print(exp_logits)
-            # print(softmaxed_logits)
-            task1a_result_total[year]['was/were_soft'], task1a_result_total[year]['is/are_soft'], task1a_result_total[year]['will_soft'] = softmaxed_logits[0], softmaxed_logits[1], softmaxed_logits[2]
-        for year, d in task1a_result_total.items():
-            final_relevant_words_logits_total = [
-                ('was/were', d['was/were'].item(), d['was/were_soft'].item()), ('is/are', d['is/are'].item(), d['is/are_soft'].item()), ('will', d['will'].item(), d['will_soft'].item())
-            ]
-            task1a_result_total_list.append((model_id, year, "[all prompts]", "-", final_relevant_words_logits_total))
-        # print(task1a_result_total_list[0])
-        # print(task1a_result_total_list[-1])
-        manager.create_probability_plots_1a(task1a_result_total_list, "task1a/", plot_softmax=False)
-
-
-
-
-        # task 1b: TODO
-
-        # task 1c
-        input_data_path = 'task1c/task1c.data'
-
-        # get next token generation and its logits
-        generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=2, years_included=False) # only generate 2 tokens, one for each
-
-        # get indices of words we care about 
-        relevant_words = [str(year) for year in range(1400, 2201)]
-        relevant_words_info = manager.learn_relevant_vocab(model_id=model_id, words_of_interest=relevant_words)
-
-        # TODO
       
-'''
+
 
 if __name__ == "__main__":
     main()
-
