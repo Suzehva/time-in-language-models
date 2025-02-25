@@ -11,7 +11,7 @@ TEMPLATES = ["In [[YEAR]] there ", "In [[YEAR]], they ",
 START_YEAR = 1950 # note: if you change start or end year, you have to change it in the plot code as well 
 END_YEAR = 2050
 
-def generate_year_distr_data(start_year:int, end_year:int, templates):
+def generate_task1a(start_year:int, end_year:int, templates):
     with open('task1a/task1a.data', 'w', newline='',) as file:
         for template in templates:
             for year in range(start_year, end_year + 1):
@@ -19,7 +19,7 @@ def generate_year_distr_data(start_year:int, end_year:int, templates):
                 file.write(prompt + ',,,' + str(year) + "\n")
     
 if __name__ == "__main__":
-    generate_year_distr_data(start_year=START_YEAR, end_year=END_YEAR, templates=TEMPLATES)
+    generate_task1a(start_year=START_YEAR, end_year=END_YEAR, templates=TEMPLATES)
 
 # TODO
 # logit:  batch size  x  seq len * vocab size

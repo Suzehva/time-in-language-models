@@ -6,7 +6,7 @@
 Time is a concept that is deeply embedded in natural language. Knowing the current time is
 so critical for day-to-day conversations that newer chat models explicitly specify the current date in
 their system prompts. In this project, we explore time representation in language models (LM’s) -
-specifically, the conflict between an LM’s internal and in-context times ([5]).
+specifically, the conflict between an LM’s internal and in-context times.
 
 We consider three questions: (1) Can we determine a LM’s internal "current" time? (2) Where is
 time localized in LM’s? (3) Can we edit an LM to control time-related outputs? The first of these

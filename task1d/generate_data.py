@@ -21,7 +21,7 @@ TENSE = ["is ", "was ", "will be "]
 START_YEAR = 1950
 END_YEAR = 2050
 
-def generate_obj_given_year_data(start_year, end_year, objs, tense):
+def generate_task1d(start_year, end_year, objs, tense):
     with open('task1d/task1d.data', 'w', newline='',) as file:
         for yr in range(start_year, end_year, 3): # TODO: is every 3 years ok?
             for obj in objs:
@@ -30,4 +30,4 @@ def generate_obj_given_year_data(start_year, end_year, objs, tense):
                     file.write(prompt + "\n")
     
 if __name__ == "__main__":
-    generate_obj_given_year_data(start_year=START_YEAR, end_year=END_YEAR, objs=OBJECTS, tense=TENSE)
+    generate_task1d(start_year=START_YEAR, end_year=END_YEAR, objs=OBJECTS, tense=TENSE)
