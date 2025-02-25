@@ -8,7 +8,7 @@ TEMPLATES = ["In [[YEAR]] there ", "In [[YEAR]], they ",
              "Today, in [[YEAR]], literature ", "Yesterday, in [[YEAR]], space travel ", 
              "As of [[YEAR]], it ", "In [[YEAR]], after the school bell, he "]
 
-START_YEAR = 1950
+START_YEAR = 1950 # note: if you change start or end year, you have to change it in the plot code as well 
 END_YEAR = 2050
 
 def generate_task1a(start_year:int, end_year:int, templates):
@@ -16,7 +16,7 @@ def generate_task1a(start_year:int, end_year:int, templates):
         for template in templates:
             for year in range(start_year, end_year + 1):
                 prompt = template[:template.find("[[")] + str(year) + template[template.find("]]")+2:]
-                file.write(prompt + "\n")
+                file.write(prompt + ',,,' + str(year) + "\n")
     
 if __name__ == "__main__":
     generate_task1a(start_year=START_YEAR, end_year=END_YEAR, templates=TEMPLATES)
