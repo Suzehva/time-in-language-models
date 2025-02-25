@@ -3,8 +3,7 @@
 # president [year] years before Obama?". This dataset will assess the LM’s temporal
 # reasoning (ability to reason about relative time).
 
-# input format: list of   (prompt, [solns])
-
+# input format: list of (prompt, [solns])
 PROMPTS = [
     ("The president of the US during the invention of the telephone was ", "Ulysses Grant"),
     ("The president of the US 10 years before John F. Kennedy was ", "Harry Truman"),
@@ -22,11 +21,7 @@ PROMPTS = [
 def generate_task2b(prompts):
     with open('task2b/task2b-with-solns.data', 'w', newline='',) as file:
         for text, value in prompts:
-            # print(value)
             file.write(text + " | " + value + "\n")
-            # for v in values:
-            #     file.write(",,," + v) ## ",,," seperated entries
-            # file.write("\n")
     with open('task2b/task2b.data', 'w', newline='',) as file:
         for text, value in prompts:
             file.write(text + "\n")  ## just the prompts

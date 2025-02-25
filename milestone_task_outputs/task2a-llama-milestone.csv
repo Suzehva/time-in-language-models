@@ -1,0 +1,26 @@
+Prompt|Expected|Generated|Status
+The year is 1838. The current president of the United States is|Martin Van Buren| Abraham Lincoln, and he is in the midst of the Great Emancipation Proclamation. The year is 1863.|🔴 Incorrect
+The year is 1870. The current president of the United States is|Ulysses Grant| Ulysses S. Grant. In the midst of a raging war, the country is at the edge of a financial|🟢 Match
+The year is 1914. The current president of the United States is|Woodrow Wilson| Woodrow Wilson. The British prime minister is David Lloyd George. The German chancellor is Theobald von Bethmann Hollweg|🟢 Match
+The year is 1950. The current president of the United States is|Harry Truman| Harry Truman. The Soviet Union is the world’s most powerful nation. The United States is the world’s second largest economy.|🟢 Match
+The year is 1975. The current president of the United States is|Gerald Ford| Richard Nixon. The Soviet Union is in the midst of a nuclear arms race and is threatening to use its weapons against the United|🔴 Incorrect
+The year is 2015. The current president of the United States is|Barack Obama| Barack Obama. He has just lost the presidential election to Donald Trump. He has been the target of much ridicule and mockery,|🟢 Match
+The year is 1950. The next Summer Olympics will take place in the city of|Helsinki Finland| Rome. The Italian Olympic Committee (CONI) has invited the Italian National Olympic Committee (CONI) to participate. The|🔴 Incorrect
+The year is 1960. The current Summer Olympics will take place in the city of|Rome Italy| Rome, Italy. The International Olympic Committee (IOC) has chosen the city of Rome as the host city for the 196|🟢 Match
+The year is 1970. The next Summer Olympics will take place in the city of|Munich West Germany| Mexico. The event is scheduled for the summer of 1972. The Olympics are the largest sporting event in the world and|🔴 Incorrect
+The year is 1979. The previous Summer Olympics had taken place in the city of|Montreal Canada| Montreal. Now, the city is about to be host to the Summer Olympics again, and this time, it will be the|🟢 Match
+The year is 1998. The next Summer Olympics will take place in the city of|Sydney Australia in 2000| Sydney, Australia. The Australian Olympic Committee (AOC) has selected the Sydney 2000 Games to be held in the|🟢 Match
+The year is 2006. The next Summer Olympics will take place in the city of|Beijing China in 2008| Athens. The Olympic torch is about to be lit. A group of Greek athletes, led by a young female athlete named Maria|🔴 Incorrect
+The year is 2017. The previous Summer Olympics will take place in the city of|Rio de Janeiro Brazil in 2016| Rio de Janeiro, Brazil. This year’s Summer Olympics will be the 30th Summer Olympic Games to be held. The|🟢 Match
+The year is 2028. The current Summer Olympics will take place in the city of|LA USA Los Angeles United States| Rio de Janeiro, Brazil. The Olympics are the most prestigious event in the world, with 28 countries competing. The United|🟢 Match
+The year is 1950. The current prime minister of the Netherlands is|Willem Drees| Willem Drees. The country is suffering from the worst economic depression since the Great Depression of the 1930s.|🟢 Match
+The year is 1975. The current prime minister of the Netherlands is|Joop den Uyl| a 30-year-old former hippie named Ruud Lubbers. Lubbers is a Dutch socialist, and he is the|🔴 Incorrect
+The year is 2015. The current prime minister of the Netherlands is|Mark Rutte| a 45-year-old woman named Mark Rutte. The prime minister is the head of the coalition government that governs the|🟢 Match
+The year is 1975. The current prime minister of India is|Indira Gandhi| Indira Gandhi, and she is a member of the Indian National Congress party. The Indian National Congress is a political party that|🟢 Match
+The year is 2006. The current prime minister of India is|Manmohan Singh| the first female prime minister. The prime minister of India is a man. The current president of India is a man. The|🔴 Incorrect
+The year is 1953. This year's winner of the Formula 1 Grand Prix is|Alberto Ascari| the British driver Stirling Moss. He is celebrating his victory with a big party at the home of his girlfriend, the French|🔴 Incorrect
+The year is 1968. This year's winner of the Formula 1 Grand Prix is|Graham Hill| the one and only Jim Clark. The year is 1968. This year's winner of the Formula 1 Grand Prix|🔴 Incorrect
+The year is 1983. This year's winner of the Formula 1 Grand Prix is|Nelson Piquet| a Ferrari. The second place is a McLaren. The third place is a Honda. The fourth place is a Lancia.|🔴 Incorrect
+The year is 1999. This year's winner of the Formula 1 Grand Prix is|Mika Häkkinen| Michael Schumacher. The German driver is the first to win the race in 1994, 1995,|🔴 Incorrect
+The year is 2003. This year's winner of the Formula 1 Grand Prix is|Michael Schumacher| Michael Schumacher, the man who will go on to win seven F1 World Championships in the next 13 years.|🟢 Match
+The year is 2017. This year's winner of the Formula 1 Grand Prix is|Lewis Hamilton| the 2017 winner of the Formula 1 Grand Prix. The winner of the 2017 Formula 1 Grand Prix|🔴 Incorrect

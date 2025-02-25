@@ -1,0 +1,12 @@
+Prompt|Expected|Generated|Status
+The president of the US during the invention of the telephone was|Ulysses Grant|""": (A) Alexander Graham Bell (B) Thomas Edison (C) Samuel Morse (D) George Washington"|🔴 Incorrect
+The president of the US 10 years before John F. Kennedy was|Harry Truman| assassinated, Richard Nixon, was the first president to be impeached by the House of Representatives. The Senate, which had|🔴 Incorrect
+When Hawaii officially became a state, the largest country in the world was|Soviet Union| not yet a state. Hawaii was a territory of the United States. The territory was ruled by the US government, and the|🔴 Incorrect
+The president of the US when the Wright brothers first flew was|Theodore Roosevelt|""""|🔴 Incorrect
+When the Titanic sank, the reigning monarch of the United Kingdom was|George V| King George V. He was 56 years old and had been on the throne for 14 years. He was the son|🟢 Match
+When the Great Fire of London happened, the most powerful empire in the world was|Ottoman Empire| on the verge of collapse. As the flames spread, the wealthy and powerful fled the city, leaving the poor and the weak|🔴 Incorrect
+When the Eiffel Tower was completed, the most populous country in the world was|China| the United States. Now, it is the People’s Republic of China. It’s not just that China has become the most|🟢 Match
+The dominant religion in India 1,000 years ago was|Hinduism| Hinduism, but by 1000 AD, the majority of people in India were Muslims. In the 11th century|🟢 Match
+When the Great Wall of China was first built, the dominant empire in the world was|Achaemenid Neo-Assyrian Median Empire| the Roman Empire. The Romans were a highly advanced society that had conquered most of the known world. The Great Wall of China|🟢 Match
+When Gandhi led the Salt March, the most populous country in the world was|China| still under British rule. Gandhi's non-violent resistance movement, which began in 1919, was a bold and effective|🔴 Incorrect
+When paper money was first used in China, the primary form of currency in Europe was|Gold silver coins| the gold coin, which was used to purchase goods and services. This led to the rise of the gold coin as a medium|🟢 Match

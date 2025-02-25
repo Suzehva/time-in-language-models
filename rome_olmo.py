@@ -1,5 +1,5 @@
 # https://stanfordnlp.github.io/pyvene/tutorials/advanced_tutorials/Causal_Tracing.html
-
+import os # aditi addition
 
 import torch
 import pandas as pd
@@ -37,6 +37,9 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
+folder_path = "pyvene_data_olmo"
+
+
 titles={
     "block_output": "single restored layer in OLMo 1B",
     "mlp_activation": "center of interval of 10 patched mlp layer",
@@ -66,11 +69,10 @@ base = "The Space Needle is in downtown"
 inputs = [
     tokenizer(base, return_tensors="pt").to(device),
 ]
-# Aditi edit: say output_hidden_states=True manually. WHY ISN"T IT IN THE MODEL CONFIG??
-res = olmo(**inputs[0], output_hidden_states=True) 
-last_hidden_state = res.hidden_states[-1] # aditi addition
-distrib = embed_to_distrib(olmo, last_hidden_state, logits=False) # this function modified by Aditi in library
+res = olmo.model(**inputs[0])  # use olmo.model to get the BASE output instead of the CAUSAL output
+distrib = embed_to_distrib(olmo, res.last_hidden_state, logits=False)
 top_vals(tokenizer, distrib[0][-1], n=10)
+
 
 ##########################################
 print("## PART TWO: CORRUPTED RUN ##")
@@ -93,7 +95,6 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
     def __str__(self):
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
 
-
 def corrupted_config(model_type):
     config = IntervenableConfig(
         model_type=model_type,
@@ -110,13 +111,15 @@ def corrupted_config(model_type):
 base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
 config = corrupted_config(type(olmo))
 intervenable = IntervenableModel(config, olmo)
+
 _, counterfactual_outputs = intervenable(
     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}
 )
 
-# aditi addition. WHY IS THERE NO last_hidden_state?? prolly bc olmo model doesn't have it... how can i fix this?
-last_hidden_state = counterfactual_outputs.hidden_states[-1]   # aditi addition
-distrib = embed_to_distrib(olmo, last_hidden_state, logits=False)
+# see edits in intervenable_base.py
+# counterfactual_outputs.hidden_states[-1] is sketchy and NOTE to fix it!
+counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
+distrib = embed_to_distrib(olmo, counterfactual_outputs.last_hidden_state, logits=False)
 top_vals(tokenizer, distrib[0][-1], n=10)
 
 
@@ -154,11 +157,12 @@ print(token)
 
 for stream in ["block_output", "mlp_activation", "attention_output"]:
     data = []
-    for layer_i in tqdm(range(olmo.config.n_layer)):
+    for layer_i in tqdm(range(olmo.config.num_hidden_layers)):  # aditi modif num_hidden_layers
         for pos_i in range(7):
             config = restore_corrupted_with_interval_config(
                 layer_i, stream, 
-                window=1 if stream == "block_output" else 10
+                window=1 if stream == "block_output" else 10, 
+                num_layers=olmo.config.num_hidden_layers
             )
             n_restores = len(config.representations) - 1
             intervenable = IntervenableModel(config, olmo)
@@ -172,22 +176,25 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
                     )
                 },
             )
+
+            counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
             distrib = embed_to_distrib(
                 olmo, counterfactual_outputs.last_hidden_state, logits=False
             )
             prob = distrib[0][-1][token].detach().cpu().item()
             data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
-    df = pd.DataFrame(data)
-    df.to_csv(f"./tutorial_data/pyvene_rome_{stream}.csv")
+    df = pd.DataFrame(data) 
+
+    os.makedirs(folder_path, exist_ok=True) # aditi addition
+    df.to_csv(f"./"+folder_path+"/pyvene_rome_{stream}.csv")
 
 
-
-##########################################
-## PLOT
-##########################################
+###############################################
+print("## LAST BUT NOT LEAST: PLOTTING :) ##")
+###############################################
 
 for stream in ["block_output", "mlp_activation", "attention_output"]:
-    df = pd.read_csv(f"./tutorial_data/pyvene_rome_{stream}.csv")
+    df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
     df["p(Seattle)"] = df["prob"].astype(float)
@@ -207,7 +214,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
         + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
     )
     ggsave(
-        plot, filename=f"./tutorial_data/pyvene_rome_{stream}.pdf", dpi=200
+        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+".pdf", dpi=200
     )
     print(plot)
 
