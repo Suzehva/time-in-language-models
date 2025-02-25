@@ -1,3 +1,5 @@
 datetime
+matplotlib
+numpy
 torch
 transformers>= 4.43.0
