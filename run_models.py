@@ -453,7 +453,7 @@ def run_task_1c(manager, model_id):
         # Customize the plot
         plt.xlabel('Year', fontsize=12)
         plt.ylabel('Perplexity (PPL)', fontsize=12)
-        plt.title(f'Perplexity Values Over Time - {obj}', fontsize=14)
+        plt.title(f'Perplexity Values Over Time - {obj} - model: {model_id}', fontsize=14)
         plt.grid(True, linestyle='--', alpha=0.5, axis='y')
         
         # Check if we should use log scale (if values span multiple orders of magnitude)
@@ -474,19 +474,19 @@ def run_task_1c(manager, model_id):
         min_idx = np.argmin(ppls_across_years)
         max_idx = np.argmax(ppls_across_years)
         
-        plt.annotate(f'Min: {ppls_across_years[min_idx]:.2e}',
-                    xy=(years[min_idx], ppls_across_years[min_idx]),
-                    xytext=(0, 20),
-                    textcoords='offset points',
-                    ha='center',
-                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=.2'))
-        
-        plt.annotate(f'Max: {ppls_across_years[max_idx]:.2e}',
-                    xy=(years[max_idx], ppls_across_years[max_idx]),
-                    xytext=(0, 20),
-                    textcoords='offset points',
-                    ha='center',
-                    arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=.2'))
+        plt.annotate(f'Min: {ppls_across_years[min_idx]:.2e} ({years[min_idx]})',
+            xy=(years[min_idx], ppls_across_years[min_idx]),
+            xytext=(0, 20),
+            textcoords='offset points',
+            ha='center',
+            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=.2'))
+
+        plt.annotate(f'Max: {ppls_across_years[max_idx]:.2e} ({years[max_idx]})',
+            xy=(years[max_idx], ppls_across_years[max_idx]),
+            xytext=(0, 20),
+            textcoords='offset points',
+            ha='center',
+            arrowprops=dict(arrowstyle='->', connectionstyle='arc3,rad=.2'))
         
         # Adjust layout to prevent label cutoff
         plt.tight_layout()
@@ -631,7 +631,7 @@ def main():
         manager.load_model(model_id)
 
         # task 1a:
-        run_task_1a(manager, model_id)
+        #run_task_1a(manager, model_id)
 
         run_task_1c(manager, model_id)
 
