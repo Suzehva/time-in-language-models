@@ -186,7 +186,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
     df = pd.DataFrame(data) 
 
     os.makedirs(folder_path, exist_ok=True) # aditi addition
-    df.to_csv(f"./"+folder_path+"/pyvene_rome_{stream}.csv")
+    df.to_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
 
 
 ###############################################
