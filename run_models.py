@@ -160,7 +160,7 @@ class MultiModelManager:
         return token_id_map
 
 
-    def store_output_to_csv(self, generated_data, output_directory: str, headers=None):
+    def store_output_to_csv(self, generated_data, output_directory: str, headers=None, delim=","):
         """
         Saves generated tokens to a CSV file with model, input, and output info.
 
@@ -188,7 +188,7 @@ class MultiModelManager:
 
         # Write the data to a CSV file
         with open(output_filepath, "w", newline="") as csvfile:
-            writer = csv.writer(csvfile)
+            writer = csv.writer(csvfile, delimiter=delim) # allows usage of different delimiters
             writer.writerow(headers)  # Write the header row
 
             for row in generated_data:
@@ -217,61 +217,62 @@ def run_task_1d():
     input_data_path = 'task1d/task1d.data'
 
 def run_task_2a(manager, model_id):
-    max_new_tokens = 10
+    # define these constants for task 2a !!
+    MAX_NEW_TOKENS = 25
     input_data_path = 'task2a/task2a.data'
     solns_data_path = 'task2a/task2a-with-solns.data'
+
     # get next token generation and its logits
-    generated_texts = manager.generate_text_from_file_simple(model_id=model_id, filename=input_data_path, max_new_tokens=max_new_tokens) 
-    generated_path = manager.store_output_to_csv(generated_texts, "task2a/" + model_id)
-    
+    generated_texts = manager.generate_text_from_file_simple(model_id=model_id, filename=input_data_path, max_new_tokens=MAX_NEW_TOKENS) 
+    generated_path = manager.store_output_to_csv(generated_texts, "task2a/" + model_id, delim="|")
+
     return generated_path, solns_data_path
 
-
-import pandas as pd
 def test_task_2a(generated_path, solns_path, model_id, manager):
-    
-    # Load solns
+    # Load solutions
     solutions_dict = {}
     with open(solns_path, "r") as file:
         for line in file:
-            if "," in line:
-                prompt, expected_answer = line.rsplit(",", 1)  # Split at last comma
+            if "|" in line:
+                prompt, expected_answer = line.rsplit("|", 1)
                 solutions_dict[prompt.strip()] = expected_answer.strip()
-    
-    # Load the AI-generated CSV
-    df = pd.read_csv(generated_path)
-    print(df.columns)
-    # Convert to dictionary { input_text: generated_token }
-    # column_1 = model column_2 = input text, column_3 = gen token
-    model_dict = dict(zip(df["column_2"], df["column_3"]))
 
-    print('SOLNS DICT\n\n' , solutions_dict)
-    print('MODEL DICT\n\n' , model_dict)
+    # Load the AI-generated CSV manually
+    model_dict = {}
+    with open(generated_path, "r") as file:
+        lines = file.readlines()
+        headers = lines[0].strip().split("|")
+        column_2_index = headers.index("column_2")
+        column_3_index = headers.index("column_3")
+        
+        for line in lines[1:]:  # Skip header
+            parts = line.strip().split("|")
+            if len(parts) > max(column_2_index, column_3_index):
+                model_dict[parts[column_2_index]] = parts[column_3_index]
+
     # Function to compare answers
     def evaluate_answers(solutions_dict, model_dict):
         results = []
         for prompt, expected in solutions_dict.items():
             generated = model_dict.get(prompt, "N/A")
-            
-            # ADITI!! TODO continue here
-
             expected_tokens = expected.lower().split()
             generated_lower = generated.lower()
             match = any(token in generated_lower for token in expected_tokens)
-            if match:
-                match_status = "🟢 Match"
-            else:
-                match_status = "🔴 Incorrect"
-        
-            results.append((prompt, expected, generated, match_status))
-    
-        return pd.DataFrame(results, columns=["Prompt", "Expected", "Generated", "Status"])
+            match_status = "🟢 Match" if match else "🔴 Incorrect"
+            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Status": match_status})
+        return results
 
     # Run evaluation
     report = evaluate_answers(solutions_dict, model_dict)
+    print("REPORT", report)
 
-    # Save or display report
-    manager.store_output_to_csv(report, "task2a/" + model_id + "_report")
+    csv_headers = ["Prompt", "Expected", "Generated", "Status"]
+    manager.store_output_to_csv(report, "task2a/" + model_id + "_report", headers=csv_headers, delim="|")
+    # # Save report as CSV manually
+    # csv_output = "Prompt|Expected|Generated|Status\n"
+    # csv_output += "\n".join(f'{row["Prompt"]}|{row["Expected"]}|{row["Generated"]}|{row["Status"]}' for row in report)
+
+    # manager.store_output_to_csv(csv_output, "task2a/" + model_id + "_report", delim="|")
 
 def run_task_2b():
     max_new_tokens = 10

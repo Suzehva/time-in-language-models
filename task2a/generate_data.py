@@ -6,7 +6,7 @@
 PROMPTS = [
     # US presidents
     ("The year is 1838. The current president of the United States is ", "Martin Van Buren"),
-    ("The year is 1870. The current president of the United States is ", "Ulysses S. Grant"),
+    ("The year is 1870. The current president of the United States is ", "Ulysses Grant"),
     ("The year is 1914. The current president of the United States is ", "Woodrow Wilson"),
     ("The year is 1950. The current president of the United States is ", "Harry Truman"),
     ("The year is 1975. The current president of the United States is ", "Gerald Ford"),
@@ -19,7 +19,7 @@ PROMPTS = [
     ("The year is 1998. The next Summer Olympics will take place in the city of ", "Sydney Australia in 2000"),
     ("The year is 2006. The next Summer Olympics will take place in the city of ", "Beijing China in 2008"),
     ("The year is 2017. The previous Summer Olympics will take place in the city of ", "Rio de Janeiro Brazil in 2016"),
-    ("The year is 2028. The current Summer Olympics will take place in the city of ", "LA USA"),
+    ("The year is 2028. The current Summer Olympics will take place in the city of ", "LA USA Los Angeles United States"),
     # international PMs 
     ("The year is 1950. The current prime minister of the Netherlands is ", "Willem Drees"),
     ("The year is 1975. The current prime minister of the Netherlands is ", "Joop den Uyl"),
@@ -39,7 +39,7 @@ PROMPTS = [
 def generate_task2a(prompts):
     with open('task2a/task2a-with-solns.data', 'w', newline='',) as file:
         for text, value in prompts:
-            file.write(text + ", " + value + "\n")  ## ",,," seperated entries
+            file.write(text + "| " + value + "\n")  ## "|" seperated entries
     with open('task2a/task2a.data', 'w', newline='',) as file:
         for text, value in prompts:
             file.write(text + "\n")  ## just the prompts
