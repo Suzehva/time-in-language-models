@@ -3,7 +3,7 @@
 # president [year] years before Obama?". This dataset will assess the LM’s temporal
 # reasoning (ability to reason about relative time).
 
-# input format: list of   (prompt, [solns])
+# input format: list of (prompt, [solns])
 PROMPTS = [
     ("The president of the US during the invention of the telephone was ", "Ulysses Grant"),
     ("The president of the US 10 years before John F. Kennedy was ", "Harry Truman"),

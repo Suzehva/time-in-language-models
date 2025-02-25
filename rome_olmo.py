@@ -161,7 +161,8 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
         for pos_i in range(7):
             config = restore_corrupted_with_interval_config(
                 layer_i, stream, 
-                window=1 if stream == "block_output" else 10
+                window=1 if stream == "block_output" else 10, 
+                num_layers=olmo.config.num_hidden_layers
             )
             n_restores = len(config.representations) - 1
             intervenable = IntervenableModel(config, olmo)
@@ -193,7 +194,7 @@ print("## LAST BUT NOT LEAST: PLOTTING :) ##")
 ###############################################
 
 for stream in ["block_output", "mlp_activation", "attention_output"]:
-    df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_{stream}.csv")
+    df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
     df["p(Seattle)"] = df["prob"].astype(float)
@@ -213,7 +214,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
         + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
     )
     ggsave(
-        plot, filename=f"./"+folder_path+"/pyvene_rome_{stream}.pdf", dpi=200
+        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+".pdf", dpi=200
     )
     print(plot)
 
