@@ -204,7 +204,7 @@ class MultiModelManager:
     def create_probability_plots_1a(self, task1a_result: List[Tuple[str, int, str, str, List[Tuple[str, float, float]]]],
                                 output_dir: str):
             """
-            Create separate plots for each sweep of years from 1950-2100 in the task1a_result data.
+            Create separate plots for each sweep of years from 1950-2200 in the task1a_result data.
             
             Args:
                 task1a_result: List of tuples containing 
@@ -301,7 +301,7 @@ def run_task_1a(manager, model_id):
     input_data_path = 'task1a/task1a.data'
 
     # get next token generation and its logits
-    generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=1, years_included=True) # only generate 1 token
+    generated_texts = manager.generate_text_from_file(model_id=model_id, filename=input_data_path, max_new_tokens=1, prefix_included=True) # only generate 1 token
     #manager.store_output_to_csv(generated_texts, "task1a/" + model_id)
 
     # get indices of words we care about 
@@ -443,7 +443,6 @@ def run_task_1c(manager, model_id):
         
         
     def create_probability_plots_1c(ppls_across_years: List[int], obj:str, start_year: int, output_dir: str):
-        pass
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
         years = [start_year + i for i in range(len(ppls_across_years))]
@@ -621,7 +620,7 @@ def test_task_2b(generated_path, solns_path, model_id, manager):
 def main():
     model_ids = [
        "meta-llama/Llama-3.2-1B",
-        #"allenai/OLMo-1B-hf",
+        "allenai/OLMo-1B-hf",
         #"google/gemma-2-2b"
     ]
     
@@ -632,7 +631,7 @@ def main():
         manager.load_model(model_id)
 
         # task 1a:
-        #run_task_1a(manager, model_id)
+        run_task_1a(manager, model_id)
 
         run_task_1c(manager, model_id)
 
