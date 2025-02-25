@@ -268,16 +268,63 @@ def test_task_2a(generated_path, solns_path, model_id, manager):
 
     csv_headers = ["Prompt", "Expected", "Generated", "Status"]
     manager.store_output_to_csv(report, "task2a/" + model_id + "_report", headers=csv_headers, delim="|")
-    # # Save report as CSV manually
-    # csv_output = "Prompt|Expected|Generated|Status\n"
-    # csv_output += "\n".join(f'{row["Prompt"]}|{row["Expected"]}|{row["Generated"]}|{row["Status"]}' for row in report)
 
-    # manager.store_output_to_csv(csv_output, "task2a/" + model_id + "_report", delim="|")
+def run_task_2b(manager, model_id):
 
-def run_task_2b():
-    max_new_tokens = 10
+    # define these constants for task 2a !!
+    MAX_NEW_TOKENS = 25
     input_data_path = 'task2b/task2b.data'
-    
+    solns_data_path = 'task2b/task2b-with-solns.data'
+
+    # get next token generation and its logits
+    generated_texts = manager.generate_text_from_file_simple(model_id=model_id, filename=input_data_path, max_new_tokens=MAX_NEW_TOKENS) 
+    generated_path = manager.store_output_to_csv(generated_texts, "task2b/" + model_id, delim="|")
+
+    # CONTINUE!! 
+    return generated_path, solns_data_path
+
+
+def test_task_2b(generated_path, solns_path, model_id, manager):
+    # Load solutions
+    solutions_dict = {}
+    with open(solns_path, "r") as file:
+        for line in file:
+            if "|" in line:
+                prompt, expected_answer = line.rsplit("|", 1)
+                solutions_dict[prompt.strip()] = expected_answer.strip()
+
+    # Load the AI-generated CSV manually
+    model_dict = {}
+    with open(generated_path, "r") as file:
+        lines = file.readlines()
+        headers = lines[0].strip().split("|")
+        column_2_index = headers.index("column_2")
+        column_3_index = headers.index("column_3")
+        
+        for line in lines[1:]:  # Skip header
+            parts = line.strip().split("|")
+            if len(parts) > max(column_2_index, column_3_index):
+                model_dict[parts[column_2_index]] = parts[column_3_index]
+
+    # Function to compare answers
+    def evaluate_answers(solutions_dict, model_dict):
+        results = []
+        for prompt, expected in solutions_dict.items():
+            generated = model_dict.get(prompt, "N/A")
+            expected_tokens = expected.lower().split()
+            generated_lower = generated.lower()
+            match = any(token in generated_lower for token in expected_tokens)
+            match_status = "🟢 Match" if match else "🔴 Incorrect"
+            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Status": match_status})
+        return results
+
+    # Run evaluation
+    report = evaluate_answers(solutions_dict, model_dict)
+    print("REPORT", report)
+
+    csv_headers = ["Prompt", "Expected", "Generated", "Status"]
+    manager.store_output_to_csv(report, "task2b/" + model_id + "_report", headers=csv_headers, delim="|")
+
 
 # ADITI's IMPLM OF MAIN
 def main():
@@ -293,9 +340,9 @@ def main():
     for model_id in model_ids:
         manager.load_model(model_id)
 
-        # task-specific
-        gen, soln = run_task_2a(manager, model_id)
-        test_task_2a(gen, soln, model_id, manager)
+        # task-specific for 2a
+        gen, soln = run_task_2b(manager, model_id)
+        test_task_2b(gen, soln, model_id, manager)
 
 
 
