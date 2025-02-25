@@ -390,7 +390,7 @@ def run_task_1a(manager, model_id):
 def run_task_1b():
     max_new_tokens = 5
     input_data_path = 'task1b/task1b.data'
-    # TODO: add code
+    # TODO: add code from before
 
 def run_task_1c(manager, model_id):
     START_YEAR, END_YEAR = 1400, 2201
@@ -502,9 +502,8 @@ def run_task_1c(manager, model_id):
         # Close the figure to free memory
         plt.close()
     
-    
-    for obj, avg_across_years in relevant_ppls_avg:
-        manager.create_probability_plots_1c(avg_across_years, obj, START_YEAR, "task1c/")
+    for obj, avg_across_years in relevant_ppls_avg.items():
+        create_probability_plots_1c(avg_across_years, obj, START_YEAR, "task1c/")
 
 
 def run_task_1d():
