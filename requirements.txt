@@ -1,5 +1,6 @@
 datetime
 matplotlib
 numpy
+pandas
 torch
 transformers>= 4.43.0

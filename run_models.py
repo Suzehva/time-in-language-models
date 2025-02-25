@@ -5,6 +5,7 @@ import datetime
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from typing import List, Tuple
 import re
 
@@ -35,7 +36,6 @@ class MultiModelManager:
         else:
             print(f"Model {model_id} already loaded.")
     
-    def generate_text_from_file(self, model_id: str, filename: str, max_new_tokens, years_included=False):
     def generate_text_from_file_simple(self, model_id: str, filename: str, max_new_tokens):
         """
         Reads input text from a file, generates one token per input, and returns structured data.
@@ -69,7 +69,7 @@ class MultiModelManager:
 
         return generated_data  # Return structured data
 
-    def generate_text_from_file(self, model_id: str, filename: str, max_new_tokens):
+    def generate_text_from_file(self, model_id: str, filename: str, max_new_tokens, years_included=False):
         """
         Reads input text from a file, generates one token per input, and returns structured data.
 
@@ -210,152 +210,47 @@ class MultiModelManager:
         print(f"Generated data has been saved to {output_filepath}.")
         return output_filepath
 
-def run_task_1a():
-    max_new_tokens = 1
-    input_data_path = 'task1a/task1a.data'
-
-def run_task_1b():
-    max_new_tokens = 5
-    input_data_path = 'task1b/task1b.data'
-
-def run_task_1c():
-    max_new_tokens = 10
-    input_data_path = 'task1c/task1c.data'
-
-def run_task_1d():
-    max_new_tokens = 10
-    input_data_path = 'task1d/task1d.data'
-
-def run_task_2a(manager, model_id):
-    max_new_tokens = 10
-    input_data_path = 'task2a/task2a.data'
-    solns_data_path = 'task2a/task2a-with-solns.data'
-    # get next token generation and its logits
-    generated_texts = manager.generate_text_from_file_simple(model_id=model_id, filename=input_data_path, max_new_tokens=max_new_tokens) 
-    generated_path = manager.store_output_to_csv(generated_texts, "task2a/" + model_id)
-    
-    return generated_path, solns_data_path
-
-
-import pandas as pd
-def test_task_2a(generated_path, solns_path, model_id, manager):
-    
-    # Load solns
-    solutions_dict = {}
-    with open(solns_path, "r") as file:
-        for line in file:
-            if "," in line:
-                prompt, expected_answer = line.rsplit(",", 1)  # Split at last comma
-                solutions_dict[prompt.strip()] = expected_answer.strip()
-    
-    # Load the AI-generated CSV
-    df = pd.read_csv(generated_path)
-    print(df.columns)
-    # Convert to dictionary { input_text: generated_token }
-    # column_1 = model column_2 = input text, column_3 = gen token
-    model_dict = dict(zip(df["column_2"], df["column_3"]))
-
-    print('SOLNS DICT\n\n' , solutions_dict)
-    print('MODEL DICT\n\n' , model_dict)
-    # Function to compare answers
-    def evaluate_answers(solutions_dict, model_dict):
-        results = []
-        for prompt, expected in solutions_dict.items():
-            generated = model_dict.get(prompt, "N/A")
-            
-            # ADITI!! TODO continue here
-
-            expected_tokens = expected.lower().split()
-            generated_lower = generated.lower()
-            match = any(token in generated_lower for token in expected_tokens)
-            if match:
-                match_status = "🟢 Match"
-            else:
-                match_status = "🔴 Incorrect"
-        
-            results.append((prompt, expected, generated, match_status))
-    
-        return pd.DataFrame(results, columns=["Prompt", "Expected", "Generated", "Status"])
-
-    # Run evaluation
-    report = evaluate_answers(solutions_dict, model_dict)
-
-    # Save or display report
-    manager.store_output_to_csv(report, "task2a/" + model_id + "_report")
-
-def run_task_2b():
-    max_new_tokens = 10
-    input_data_path = 'task2b/task2b.data'
-    
-
-# ADITI's IMPLM OF MAIN
-def main():
-    model_ids = [
-        "meta-llama/Llama-3.2-1B",
-        "allenai/OLMo-1B-hf",
-        # "google/gemma-2-2b"
-    ]
-    
-    # Create the MultiModelManager instance
-    manager = MultiModelManager()
-
-    for model_id in model_ids:
-        manager.load_model(model_id)
-
-        # task-specific
-        gen, soln = run_task_2a(manager, model_id)
-        test_task_2a(gen, soln, model_id, manager)
-
-
-
-
-# SUZE's IMPLM OF MAIN
-'''
-
-
     def create_probability_plots_1a(self, task1a_result: List[Tuple[str, int, str, str, List[Tuple[str, float, float]]]],
-                            output_dir: str, plot_softmax=True):
-        """
-        Create separate plots for each sweep of years from 1950-2050 in the task1a_result data.
-        
-        Args:
-            task1a_result: List of tuples containing 
-                        (model_id, input_year, input_text, generated_text, relevant_words_logits)
-                        where relevant_words_logits is a list of (word, logit, softmaxed_logit) tuples
-            output_dir: Directory to save plot files
-        """
-        # Create output directory if it doesn't exist
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-        
-        # Group data by sweep
-        sweeps = []
-        current_sweep = []
-        prev_year = None
-        
-        for entry in task1a_result:
-            #print(entry)
-            model_id, input_year, input_text, generated_text, relevant_words_logits = entry
+                                output_dir: str, plot_softmax=True):
+            """
+            Create separate plots for each sweep of years from 1950-2050 in the task1a_result data.
             
-            # Check if we've started a new sweep
-            if prev_year is not None and int(input_year) == 1950:
-                # We've wrapped around to a new sweep
-                if current_sweep:
-                    sweeps.append(current_sweep)
-                    current_sweep = []
+            Args:
+                task1a_result: List of tuples containing 
+                            (model_id, input_year, input_text, generated_text, relevant_words_logits)
+                            where relevant_words_logits is a list of (word, logit, softmaxed_logit) tuples
+                output_dir: Directory to save plot files
+            """
+            # Create output directory if it doesn't exist
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
             
-            current_sweep.append((model_id, input_year, input_text, generated_text, relevant_words_logits))
-            prev_year = input_year
-        
-        # Add the last sweep
-        if current_sweep:
-            sweeps.append(current_sweep)
-        
-        # Create a plot for each sweep
-        for sweep_idx, sweep_data in enumerate(sweeps):
-            self.create_sweep_plot(sweep_data, sweep_idx, output_dir, plot_softmax=plot_softmax)
+            # Group data by sweep
+            sweeps = []
+            current_sweep = []
+            prev_year = None
             
-        
+            for entry in task1a_result:
+                #print(entry)
+                model_id, input_year, input_text, generated_text, relevant_words_logits = entry
+                
+                # Check if we've started a new sweep
+                if prev_year is not None and int(input_year) == 1950:
+                    # We've wrapped around to a new sweep
+                    if current_sweep:
+                        sweeps.append(current_sweep)
+                        current_sweep = []
+                
+                current_sweep.append((model_id, input_year, input_text, generated_text, relevant_words_logits))
+                prev_year = input_year
+            
+            # Add the last sweep
+            if current_sweep:
+                sweeps.append(current_sweep)
+            
+            # Create a plot for each sweep
+            for sweep_idx, sweep_data in enumerate(sweeps):
+                self.create_sweep_plot(sweep_data, sweep_idx, output_dir, plot_softmax=plot_softmax)
 
     def create_sweep_plot(self, sweep_data, sweep_idx, output_dir, plot_softmax):
         """Create a plot for a single sweep of the year range."""
@@ -425,22 +320,117 @@ def main():
         plt.savefig(filepath, dpi=300, bbox_inches='tight')
         print(f"Created plot for sweep {sweep_idx+1}: {filepath}")
 
+def run_task_1a():
+    max_new_tokens = 1
+    input_data_path = 'task1a/task1a.data'
+
+def run_task_1b():
+    max_new_tokens = 5
+    input_data_path = 'task1b/task1b.data'
+
+def run_task_1c():
+    max_new_tokens = 10
+    input_data_path = 'task1c/task1c.data'
+
+def run_task_1d():
+    max_new_tokens = 10
+    input_data_path = 'task1d/task1d.data'
+
+def run_task_2a(manager, model_id):
+    max_new_tokens = 10
+    input_data_path = 'task2a/task2a.data'
+    solns_data_path = 'task2a/task2a-with-solns.data'
+    # get next token generation and its logits
+    generated_texts = manager.generate_text_from_file_simple(model_id=model_id, filename=input_data_path, max_new_tokens=max_new_tokens) 
+    generated_path = manager.store_output_to_csv(generated_texts, "task2a/" + model_id)
+    
+    return generated_path, solns_data_path
+
+
+
+def test_task_2a(generated_path, solns_path, model_id, manager):
+    
+    # Load solns
+    solutions_dict = {}
+    with open(solns_path, "r") as file:
+        for line in file:
+            if "," in line:
+                prompt, expected_answer = line.rsplit(",", 1)  # Split at last comma
+                solutions_dict[prompt.strip()] = expected_answer.strip()
+    
+    # Load the AI-generated CSV
+    df = pd.read_csv(generated_path)
+    print(df.columns)
+    # Convert to dictionary { input_text: generated_token }
+    # column_1 = model column_2 = input text, column_3 = gen token
+    model_dict = dict(zip(df["column_2"], df["column_3"]))
+
+    print('SOLNS DICT\n\n' , solutions_dict)
+    print('MODEL DICT\n\n' , model_dict)
+    # Function to compare answers
+    def evaluate_answers(solutions_dict, model_dict):
+        results = []
+        for prompt, expected in solutions_dict.items():
+            generated = model_dict.get(prompt, "N/A")
+            
+            # ADITI!! TODO continue here
+
+            expected_tokens = expected.lower().split()
+            generated_lower = generated.lower()
+            match = any(token in generated_lower for token in expected_tokens)
+            if match:
+                match_status = "🟢 Match"
+            else:
+                match_status = "🔴 Incorrect"
+        
+            results.append((prompt, expected, generated, match_status))
+    
+        return pd.DataFrame(results, columns=["Prompt", "Expected", "Generated", "Status"])
+
+    # Run evaluation
+    report = evaluate_answers(solutions_dict, model_dict)
+
+    # Save or display report
+    manager.store_output_to_csv(report, "task2a/" + model_id + "_report")
+
+def run_task_2b():
+    max_new_tokens = 10
+    input_data_path = 'task2b/task2b.data'
+    
+
+# # ADITI's IMPLM OF MAIN
+# def main():
+#     model_ids = [
+#         "meta-llama/Llama-3.2-1B",
+#         "allenai/OLMo-1B-hf",
+#         # "google/gemma-2-2b"
+#     ]
+    
+#     # Create the MultiModelManager instance
+#     manager = MultiModelManager()
+
+#     for model_id in model_ids:
+#         manager.load_model(model_id)
+
+#         # task-specific
+#         gen, soln = run_task_2a(manager, model_id)
+#         test_task_2a(gen, soln, model_id, manager)
+
+
+
+
+            
+        
+
+
 
 
 def main():
     model_ids = [
         "meta-llama/Llama-3.2-1B",
         "allenai/OLMo-1B-hf",
-        "google/gemma-2-2b"
+        #"google/gemma-2-2b"
     ]
-
-    # task : max num of new tokens (max_new_tokens)
-    # tasks = {  
-    #     "task1a":1,
-    #     "task1b":5,
-    #     "task1c":10,
-    #     "task1d":10
-    # }
     
     # Create the MultiModelManager instance
     manager = MultiModelManager()
@@ -547,7 +537,7 @@ def main():
         manager.create_probability_plots_1a(task1a_result_total_list, "task1a/", plot_softmax=False)
 
 
-        return 1
+
 
         # task 1b: TODO
 
@@ -563,5 +553,6 @@ def main():
 
         # TODO
       
-
+if __name__ == "__main__":
+    main()
 
