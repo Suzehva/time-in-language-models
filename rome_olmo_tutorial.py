@@ -89,9 +89,6 @@ colors={
     "attention_output": "Reds"
 } 
 
-# change here to change code
-PROMPT = "In 1980 there"
-
 ##########################################
 print("## PART ONE: FACTUAL RECALL ##")
 ##########################################
@@ -103,12 +100,11 @@ config, tokenizer, olmo = create_olmo(name=model_name)
 
 olmo.to(device)
 
-base = PROMPT
+base = "The Space Needle is in downtown"
 inputs = [
     tokenizer(base, return_tensors="pt").to(device),
 ]
 res = olmo.model(**inputs[0])  # use olmo.model to get the BASE output instead of the CAUSAL output
-print(base)
 distrib = embed_to_distrib(olmo, res.last_hidden_state, logits=False)
 top_vals(tokenizer, distrib[0][-1], n=10)
 
@@ -124,7 +120,7 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
         rs = np.random.RandomState(1)
         prng = lambda *shape: rs.randn(*shape)
         self.noise = torch.from_numpy(
-            prng(1, 2, embed_dim)).to(device)
+            prng(1, 4, embed_dim)).to(device)
         self.noise_level = 0.13462981581687927
 
     def forward(self, base, source=None, subspaces=None):
@@ -147,12 +143,12 @@ def corrupted_config(model_type):
     )
     return config
 
-base = tokenizer("In 1980 there", return_tensors="pt").to(device)
+base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
 config = corrupted_config(type(olmo))
 intervenable = IntervenableModel(config, olmo)
 
 _, counterfactual_outputs = intervenable(
-    base, unit_locations={"base": ([[[0, 1]]])}
+    base, unit_locations={"base": ([[[0, 1, 2, 3]]])}
 )
 
 # see edits in intervenable_base.py
@@ -187,13 +183,13 @@ def restore_corrupted_with_interval_config(
     return config
 
 # should finish within 1 min with a standard 12G GPU
-token = tokenizer.encode(" was")[0]
+token = tokenizer.encode(" Seattle")[0]  # 16335
 print(token)
 
 for stream in ["block_output", "mlp_activation", "attention_output"]:
     data = []
     for layer_i in tqdm(range(olmo.config.num_hidden_layers)):  # aditi modif num_hidden_layers
-        for pos_i in range(3):
+        for pos_i in range(7):
             config = restore_corrupted_with_interval_config(
                 layer_i, stream, 
                 window=1 if stream == "block_output" else 10, 
@@ -207,7 +203,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
                 {
                     "sources->base": (
                         [None] + [[[pos_i]]]*n_restores,
-                        [[[0, 1]]] + [[[pos_i]]]*n_restores,
+                        [[[0, 1, 2, 3]]] + [[[pos_i]]]*n_restores,
                     )
                 },
             )
@@ -232,7 +228,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
     df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
-    df["p(was)"] = df["prob"].astype(float)
+    df["p(Seattle)"] = df["prob"].astype(float)
 
     custom_labels = ["The*", "Space*", "Need*", "le*", "is", "in", "downtown"]
     breaks = [0, 1, 2, 3, 4, 5, 6]
