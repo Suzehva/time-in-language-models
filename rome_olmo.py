@@ -2,7 +2,7 @@
 import os # aditi addition
 
 # EDITS BY ADITI. 
-# in pyvene's basic_utils.py
+# in pyvene's basic_utils.py, around line 44
 # def embed_to_distrib(model, embed, log=False, logits=False):
 #     """Convert an embedding to a distribution over the vocabulary"""
 #     if "gpt2" in model.config.architectures[0].lower():
@@ -19,6 +19,9 @@ import os # aditi addition
 #             return lsm(vocab) if log else sm(vocab)
 #     elif "llama" in model.config.architectures[0].lower():
 #         assert False, "Support for LLaMA is not here yet"
+
+# in pyvene's init.py, around line 55
+# from .models.olmo.modelings_intervenable_olmo import create_olmo  # aditi update
 
 
 import torch
