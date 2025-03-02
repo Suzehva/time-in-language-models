@@ -151,10 +151,6 @@ def restore_corrupted_with_interval_config(
 token = tokenizer.encode(" Seattle")[0]  # 16335
 print(token)
 
-# test to make sure the tokens are not a constant lol :)
-# token = tokenizer.encode(" Aditi")[0]    # 2006
-# print(token)
-
 for stream in ["block_output", "mlp_activation", "attention_output"]:
     data = []
     for layer_i in tqdm(range(olmo.config.num_hidden_layers)):  # aditi modif num_hidden_layers
