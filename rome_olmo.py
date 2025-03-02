@@ -23,6 +23,19 @@ import os # aditi addition
 # in pyvene's init.py, around line 55
 # from .models.olmo.modelings_intervenable_olmo import create_olmo  # aditi update
 
+# in pyvene's intervenable_base.py, around line 1945
+# # run intervened forward
+# model_kwargs = {}
+# if labels is not None: # for training
+#     model_kwargs["labels"] = labels
+# if use_cache is not None and 'use_cache' in self.model.config.to_dict(): # for transformer models
+#     model_kwargs["use_cache"] = use_cache
+
+# model_kwargs["output_hidden_states"] = True   # aditi addition
+# # print("model_kwargs", model_kwargs)  # aditi addition
+
+# counterfactual_outputs = self.model(**base, **model_kwargs)
+# # print("counterfactual_outputs", counterfactual_outputs)  # aditi addition
 
 import torch
 import pandas as pd
@@ -60,7 +73,7 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
-folder_path = "pyvene_data_olmo"
+folder_path = "pyvene_data_olmo_time"
 
 
 titles={
