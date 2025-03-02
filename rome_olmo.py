@@ -1,5 +1,6 @@
 # https://stanfordnlp.github.io/pyvene/tutorials/advanced_tutorials/Causal_Tracing.html
 import os # aditi addition
+import datetime # suze addition
 
 # EDITS BY ADITI. 
 # in pyvene's basic_utils.py, around line 44
@@ -24,18 +25,20 @@ import os # aditi addition
 # from .models.olmo.modelings_intervenable_olmo import create_olmo  # aditi update
 
 # in pyvene's intervenable_base.py, around line 1945, in the forward function
-# # run intervened forward
+# run intervened forward
 # model_kwargs = {}
 # if labels is not None: # for training
 #     model_kwargs["labels"] = labels
 # if use_cache is not None and 'use_cache' in self.model.config.to_dict(): # for transformer models
 #     model_kwargs["use_cache"] = use_cache
-#
+
 # model_kwargs["output_hidden_states"] = True   # aditi addition
 # # print("model_kwargs", model_kwargs)  # aditi addition
-#
+
 # counterfactual_outputs = self.model(**base, **model_kwargs)
 # # print("counterfactual_outputs", counterfactual_outputs)  # aditi addition
+
+# ------------------------------------------------------------------------------
 
 import torch
 import pandas as pd
@@ -50,9 +53,7 @@ from pyvene import (
     LocalistRepresentationIntervention
 )
 from pyvene import create_olmo
-# from pyvene import create_gpt2
 
-# %config InlineBackend.figure_formats = ['svg'] 
 import matplotlib as mpl
 mpl.rcParams['figure.figsize'] = (6, 4)  # Set default figure size
 mpl.rcParams['svg.fonttype'] = 'none'  # Keep text as text in SVGs
@@ -95,9 +96,7 @@ print("## PART ONE: FACTUAL RECALL ##")
 model_name = "allenai/OLMo-1B-hf"  # autoregressive model 
 
 device = "cuda:0" if torch.cuda.is_available() else "cpu"
-config, tokenizer, olmo = create_olmo(name=model_name) # create_gpt2(name="gpt2-xl")
-
-# config.output_hidden_states = True # aditi addition
+config, tokenizer, olmo = create_olmo(name=model_name)
 
 olmo.to(device)
 
@@ -245,8 +244,10 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
         + theme(figure_size=(5, 4)) + ylab("") 
         + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
     )
+    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
+
     ggsave(
-        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+".pdf", dpi=200
+        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".pdf", dpi=200 # suze edit
     )
     print(plot)
 
