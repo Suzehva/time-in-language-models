@@ -73,7 +73,9 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
-folder_path = "pyvene_data_olmo_time"
+import datetime
+
+folder_path = "pyvene_data_olmo_time_year"
 
 titles={
     "block_output": "single restored layer in OLMo 1B",
@@ -87,6 +89,23 @@ colors={
     "attention_output": "Reds"
 } 
 
+# Seattle PROMPT CONSTS
+# PROMPT = "The Space Needle is in downtown"
+# PROMPT_LEN = 7 # needle splits into need + le
+# DIM_CORRUPTED_TOKENS = 4
+# CORRUPTED_TOKENS = [[[0, 1, 2, 3]]]
+# SOLUTION = " Seattle"
+# CUSTOM_LABELS = ["The*", "Space*", "Need*", "le*", "is", "in", "downtown"]
+# BREAKS = [0, 1, 2, 3, 4, 5, 6]
+
+# 1980 PROMPT CONSTS
+PROMPT = "In 1980 there"
+PROMPT_LEN = 3
+DIM_CORRUPTED_TOKENS = 2
+CORRUPTED_TOKENS = [[[0, 1]]]
+SOLUTION = " was"
+CUSTOM_LABELS = ["In*", "1980*", "there"]
+BREAKS = [0, 1, 2]
 
 ##########################################
 print("## PART ONE: FACTUAL RECALL ##")
@@ -101,11 +120,12 @@ config, tokenizer, olmo = create_olmo(name=model_name) # create_gpt2(name="gpt2-
 
 olmo.to(device)
 
-base = "The Space Needle is in downtown"
+base = PROMPT
 inputs = [
     tokenizer(base, return_tensors="pt").to(device),
 ]
 res = olmo.model(**inputs[0])  # use olmo.model to get the BASE output instead of the CAUSAL output
+print(base)
 distrib = embed_to_distrib(olmo, res.last_hidden_state, logits=False)
 top_vals(tokenizer, distrib[0][-1], n=10)
 
@@ -121,7 +141,7 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
         rs = np.random.RandomState(1)
         prng = lambda *shape: rs.randn(*shape)
         self.noise = torch.from_numpy(
-            prng(1, 4, embed_dim)).to(device)
+            prng(1, DIM_CORRUPTED_TOKENS, embed_dim)).to(device)
         self.noise_level = 0.13462981581687927
 
     def forward(self, base, source=None, subspaces=None):
@@ -144,12 +164,12 @@ def corrupted_config(model_type):
     )
     return config
 
-base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
+base = tokenizer(PROMPT, return_tensors="pt").to(device)
 config = corrupted_config(type(olmo))
 intervenable = IntervenableModel(config, olmo)
 
 _, counterfactual_outputs = intervenable(
-    base, unit_locations={"base": ([[[0, 1, 2, 3]]])}  # defines which positions get corrupted
+    base, unit_locations={"base": (CORRUPTED_TOKENS)}  # defines which positions get corrupted
 )
 
 # see edits in intervenable_base.py
@@ -184,13 +204,13 @@ def restore_corrupted_with_interval_config(
     return config
 
 # should finish within 1 min with a standard 12G GPU
-token = tokenizer.encode(" Seattle")[0]  # 16335
+token = tokenizer.encode(SOLUTION)[0]  # 16335
 print(token)
 
 for stream in ["block_output", "mlp_activation", "attention_output"]:
     data = []
     for layer_i in tqdm(range(olmo.config.num_hidden_layers)):  # aditi modif num_hidden_layers
-        for pos_i in range(7):
+        for pos_i in range(PROMPT_LEN):  # TODO assuming the range had to do with prompt len. It was previously 7
             config = restore_corrupted_with_interval_config(
                 layer_i, stream, 
                 window=1 if stream == "block_output" else 10, 
@@ -204,7 +224,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
                 {
                     "sources->base": (
                         [None] + [[[pos_i]]]*n_restores,
-                        [[[0, 1, 2, 3]]] + [[[pos_i]]]*n_restores,
+                        CORRUPTED_TOKENS + [[[pos_i]]]*n_restores,
                     )
                 },
             )
@@ -229,15 +249,15 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
     df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
-    df["p(Seattle)"] = df["prob"].astype(float)
+    df["p("+SOLUTION+")"] = df["prob"].astype(float)
 
-    custom_labels = ["The*", "Space*", "Need*", "le*", "is", "in", "downtown"]
-    breaks = [0, 1, 2, 3, 4, 5, 6]
+    custom_labels = CUSTOM_LABELS
+    breaks = BREAKS
 
     plot = (
         ggplot(df, aes(x="layer", y="pos"))    
 
-        + geom_tile(aes(fill="p(Seattle)"))
+        + geom_tile(aes(fill="p("+SOLUTION+")"))
         + scale_fill_cmap(colors[stream]) + xlab(titles[stream])
         + scale_y_reverse(
             limits = (-0.5, 6.5), 
@@ -245,7 +265,9 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
         + theme(figure_size=(5, 4)) + ylab("") 
         + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
     )
+    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
+
     ggsave(
-        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+".pdf", dpi=200
+        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".pdf", dpi=200 # suze edit
     )
     print(plot)
