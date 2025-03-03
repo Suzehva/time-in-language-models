@@ -109,33 +109,21 @@ BREAKS = [0, 1, 2]
 
 # 2050 PROMPT CONSTS
 # PROMPT = "In 2050 there"
-PROMPT = "In 1980 there"
-PROMPT_LEN = 3
-DIM_CORRUPTED_TOKENS = 2
-CORRUPTED_TOKENS = [[[0, 1]]]
-SOLUTION = " was"
-CUSTOM_LABELS = ["In*", "1980*", "there"]
-BREAKS = [0, 1, 2]
+# PROMPT_LEN = 3
+# DIM_CORRUPTED_TOKENS = 2
+# CORRUPTED_TOKENS = [[[0, 1]]]
+# SOLUTION = " was"
+# CUSTOM_LABELS = ["In*", "2050*", "there"]
+# BREAKS = [0, 1, 2]
 
-# 2050 PROMPT CONSTS
-# PROMPT = "In 2050 there"
+# 2020 PROMPT CONSTS
+# PROMPT = "In 2020 there"
 # PROMPT_LEN = 3
 # DIM_CORRUPTED_TOKENS = 2
 # CORRUPTED_TOKENS = [[[0, 1]]]
 # SOLUTION = " will"
-# CUSTOM_LABELS = ["In*", "2050*", "there"]
-# SOLUTION = " will"
-# CUSTOM_LABELS = ["In*", "2050*", "there"]
+# CUSTOM_LABELS = ["In*", "2020*", "there"]
 # BREAKS = [0, 1, 2]
-
-# 2022 PROMPT CONSTS
-PROMPT = "In 2022 there"
-PROMPT_LEN = 3
-DIM_CORRUPTED_TOKENS = 2
-CORRUPTED_TOKENS = [[[0, 1]]]
-SOLUTION = " is"
-CUSTOM_LABELS = ["In*", "2022*", "there"]
-BREAKS = [0, 1, 2]
 
 ##########################################
 print("## PART ONE: FACTUAL RECALL ##")
