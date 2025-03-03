@@ -75,7 +75,7 @@ from tqdm import tqdm
 
 import datetime
 
-folder_path = "pyvene_data_olmo_time_year"
+folder_path = "pyvene_data_olmo_time"
 
 titles={
     "block_output": "single restored layer in OLMo 1B",
@@ -99,12 +99,21 @@ colors={
 # BREAKS = [0, 1, 2, 3, 4, 5, 6]
 
 # 1980 PROMPT CONSTS
-PROMPT = "In 1980 there"
+# PROMPT = "In 1980 there"
+# PROMPT_LEN = 3
+# DIM_CORRUPTED_TOKENS = 2
+# CORRUPTED_TOKENS = [[[0, 1]]]
+# SOLUTION = " was"
+# CUSTOM_LABELS = ["In*", "1980*", "there"]
+# BREAKS = [0, 1, 2]
+
+# 2050 PROMPT CONSTS
+PROMPT = "In 2050 there"
 PROMPT_LEN = 3
 DIM_CORRUPTED_TOKENS = 2
 CORRUPTED_TOKENS = [[[0, 1]]]
-SOLUTION = " was"
-CUSTOM_LABELS = ["In*", "1980*", "there"]
+SOLUTION = " will"
+CUSTOM_LABELS = ["In*", "2050*", "there"]
 BREAKS = [0, 1, 2]
 
 ##########################################
