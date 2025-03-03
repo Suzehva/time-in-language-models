@@ -557,7 +557,9 @@ def test_task_2a(generated_path, solns_path, model_id, manager):
             match = any(token in generated_lower for token in expected_tokens)
             correct += 1 if match else 0
             total += 1
-            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Correct":("🟢" if match else"🔴") })
+            # displ_corr = "🟢" if match else "🔴"
+            displ_corr = "CORRECT" if match else "WRONG"
+            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Correct":displ_corr })
         return results, (correct/total)
 
     # Run evaluation
@@ -614,7 +616,8 @@ def test_task_2b(generated_path, solns_path, model_id, manager):
             match = any(token in generated_lower for token in expected_tokens)
             correct += 1 if match else 0
             total += 1
-            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Correct":("🟢" if match else"🔴") })
+            displ_corr = "CORRECT" if match else "WRONG"
+            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Correct": displ_corr})
         return results, (correct/total)
 
     # Run evaluation
