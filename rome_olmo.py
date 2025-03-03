@@ -255,7 +255,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
     print("## PLOTTING :) ##")
     ###############################################
 
-    df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".csv")
+    df = pd.read_csv(f"./"+folder_path+"/tracing_"+stream+timestamp+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
     df["p("+SOLUTION+")"] = df["prob"].astype(float)
