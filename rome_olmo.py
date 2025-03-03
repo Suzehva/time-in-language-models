@@ -247,7 +247,8 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
     df = pd.DataFrame(data) 
 
     os.makedirs(folder_path, exist_ok=True) # aditi addition
-    df.to_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
+    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
+    df.to_csv(f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".csv")
 
 
 ###############################################
