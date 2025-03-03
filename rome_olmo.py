@@ -99,22 +99,22 @@ colors={
 # BREAKS = [0, 1, 2, 3, 4, 5, 6]
 
 # 1980 PROMPT CONSTS
-# PROMPT = "In 1980 there"
-# PROMPT_LEN = 3
-# DIM_CORRUPTED_TOKENS = 2
-# CORRUPTED_TOKENS = [[[0, 1]]]
-# SOLUTION = " was"
-# CUSTOM_LABELS = ["In*", "1980*", "there"]
-# BREAKS = [0, 1, 2]
-
-# 2050 PROMPT CONSTS
-PROMPT = "In 2050 there"
+PROMPT = "In 1980 there"
 PROMPT_LEN = 3
 DIM_CORRUPTED_TOKENS = 2
 CORRUPTED_TOKENS = [[[0, 1]]]
-SOLUTION = " will"
-CUSTOM_LABELS = ["In*", "2050*", "there"]
+SOLUTION = " was"
+CUSTOM_LABELS = ["In*", "1980*", "there"]
 BREAKS = [0, 1, 2]
+
+# 2050 PROMPT CONSTS
+# PROMPT = "In 2050 there"
+# PROMPT_LEN = 3
+# DIM_CORRUPTED_TOKENS = 2
+# CORRUPTED_TOKENS = [[[0, 1]]]
+# SOLUTION = " will"
+# CUSTOM_LABELS = ["In*", "2050*", "there"]
+# BREAKS = [0, 1, 2]
 
 ##########################################
 print("## PART ONE: FACTUAL RECALL ##")
@@ -248,14 +248,14 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
 
     os.makedirs(folder_path, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
-    df.to_csv(f"./"+folder_path+"/tracing_"+stream+timestamp+".csv")
+    df.to_csv(f"./"+folder_path+"/"+PROMPT+stream+timestamp+".csv")
 
 
     ###############################################
     print("## PLOTTING :) ##")
     ###############################################
 
-    df = pd.read_csv(f"./"+folder_path+"/tracing_"+stream+timestamp+".csv")
+    df = pd.read_csv(f"./"+folder_path+"/"+PROMPT+stream+timestamp+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
     df["p("+SOLUTION+")"] = df["prob"].astype(float)
@@ -276,7 +276,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
     )
 
     ggsave(
-        plot, filename=f"./"+folder_path+"/tracing_"+stream+timestamp+".pdf", dpi=200 # suze edit
+        plot, filename=f"./"+folder_path+"/"+PROMPT+stream+timestamp+".pdf", dpi=200 # suze edit
     )
     print(plot)
 
