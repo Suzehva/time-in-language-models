@@ -510,6 +510,7 @@ def run_task_1d():
     input_data_path = 'task1d/task1d.data'
     # TODO: add code and change from last time
 
+
 def run_task_2a(manager, model_id):
     # define these constants for task 2a !!
     MAX_NEW_TOKENS = 25
@@ -521,7 +522,6 @@ def run_task_2a(manager, model_id):
     generated_path = manager.store_output_to_csv(generated_texts, "task2a/" + model_id, delim="|")
 
     return generated_path, solns_data_path
-
 
 
 def test_task_2a(generated_path, solns_path, model_id, manager):
@@ -548,20 +548,24 @@ def test_task_2a(generated_path, solns_path, model_id, manager):
     # Function to compare answers
     def evaluate_answers(solutions_dict, model_dict):
         results = []
+        correct = 0
+        total = 0
         for prompt, expected in solutions_dict.items():
             generated = model_dict.get(prompt, "N/A")
             expected_tokens = expected.lower().split()
             generated_lower = generated.lower()
             match = any(token in generated_lower for token in expected_tokens)
-            match_status = "🟢 Match" if match else "🔴 Incorrect"
-            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Status": match_status})
-        return results
+            correct += 1 if match else 0
+            total += 1
+            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Correct":("🟢" if match else"🔴") })
+        return results, (correct/total)
 
     # Run evaluation
-    report = evaluate_answers(solutions_dict, model_dict)
-    print("REPORT", report)
+    report, accuracy = evaluate_answers(solutions_dict, model_dict)
+    print("REPORT", report, "\nACCURACY", accuracy)
 
     csv_headers = ["Prompt", "Expected", "Generated", "Status"]
+    report.append("\n\nAccuracy:"+str(accuracy), ",,,")
     manager.store_output_to_csv(report, "task2a/" + model_id + "_report", headers=csv_headers, delim="|")
 
 def run_task_2b(manager, model_id):
@@ -599,23 +603,27 @@ def test_task_2b(generated_path, solns_path, model_id, manager):
             if len(parts) > max(column_2_index, column_3_index):
                 model_dict[parts[column_2_index]] = parts[column_3_index]
 
-    # Function to compare answers
     def evaluate_answers(solutions_dict, model_dict):
         results = []
+        correct = 0
+        total = 0
         for prompt, expected in solutions_dict.items():
             generated = model_dict.get(prompt, "N/A")
             expected_tokens = expected.lower().split()
             generated_lower = generated.lower()
             match = any(token in generated_lower for token in expected_tokens)
-            match_status = "🟢 Match" if match else "🔴 Incorrect"
-            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Status": match_status})
-        return results
+            correct += 1 if match else 0
+            total += 1
+            results.append({"Prompt": prompt, "Expected": expected, "Generated": generated, "Correct":("🟢" if match else"🔴") })
+        return results, (correct/total)
 
     # Run evaluation
-    report = evaluate_answers(solutions_dict, model_dict)
+    report, accuracy = evaluate_answers(solutions_dict, model_dict)
+    print("REPORT", report, "\nACCURACY", accuracy)
 
-    # Save or display report
-    manager.store_output_to_csv(report, "task2a/" + model_id + "_report")
+    csv_headers = ["Prompt", "Expected", "Generated", "Status"]
+    report.append({"Prompt":"\n\nAccuracy:"+str(accuracy),"Expected": "", "Generated": "", "Correct":""} ) # dummy line
+    manager.store_output_to_csv(report, "task2b/" + model_id + "_report", headers=csv_headers, delim="|")
 
 def main():
     model_ids = [
@@ -631,12 +639,12 @@ def main():
         manager.load_model(model_id)
 
         # task 1a:
-        #run_task_1a(manager, model_id)
+        # run_task_1a(manager, model_id)
 
-        run_task_1c(manager, model_id)
+        generated_path, solns_path = run_task_2b(manager, model_id)
+        test_task_2b(generated_path, solns_path, model_id, manager)
+        # run_task_1c(manager, model_id)
 
-
-      
 
 
 if __name__ == "__main__":

@@ -5,17 +5,32 @@
 
 # input format: list of (prompt, [solns])
 PROMPTS = [
-    ("The president of the US during the invention of the telephone was ", "Ulysses Grant"),
-    ("The president of the US 10 years before John F. Kennedy was ", "Harry Truman"),
-    ("When Hawaii officially became a state, the largest country in the world was ", "Soviet Union"),
-    ("The president of the US when the Wright brothers first flew was ", "Theodore Roosevelt"),
-    ("When the Titanic sank, the reigning monarch of the United Kingdom was ", "George V"),
-    ("When the Great Fire of London happened, the most powerful empire in the world was ", "Ottoman Empire"),
-    ("When the Eiffel Tower was completed, the most populous country in the world was ", "China"),
-    ("The dominant religion in India 1,000 years ago was ", "Hinduism"),
-    ("When the Great Wall of China was first built, the dominant empire in the world was ", "Achaemenid Neo-Assyrian Median Empire"),
-    ("When Gandhi led the Salt March, the most populous country in the world was ", "China"),
-    ("When paper money was first used in China, the primary form of currency in Europe was ", "Gold silver coins")
+    ("The current president of the US is John F. Kennedy. The president 10 years ago was ", "Harry Truman"),
+    ("The current president of the US is George Washington. The president 10 years ago was ", "None"),
+    ("The current president of the US is Thomas Jefferson. The president 10 years ago was ", "John Adams"),
+    ("The current president of the US is James Madison. The president 10 years ago was ", "Thomas Jefferson"),
+    ("The current president of the US is James Monroe. The president 10 years ago was ", "James Madison"),
+    ("The current president of the US is Andrew Jackson. The president 10 years ago was ", "James Monroe"),
+    ("The current president of the US is Martin Van Buren. The president 10 years ago was ", "John Quincy Adams"),
+    ("The current president of the US is John Tyler. The president 10 years ago was ", "Andrew Jackson"),
+    ("The current president of the US is James K. Polk. The president 10 years ago was ", "Andrew Jackson"),
+    ("The current president of the US is Franklin Pierce. The president 10 years ago was ", "John Tyler"),
+    ("The current president of the US is James Buchanan. The president 10 years ago was ", "James K. Polk"),
+    ("The current president of the US is Abraham Lincoln. The president 10 years ago was ", "Franklin Pierce"),
+    ("The current president of the US is Ulysses S. Grant. The president 10 years ago was ", "James Buchanan"),
+    ("The current president of the US is Rutherford B. Hayes. The president 10 years ago was ", "Abraham Lincoln"),
+    ("The current president of the US is Benjamin Harrison. The president 10 years ago was ", "James Buchanan"),
+    ("The current president of the US is William McKinley. The president 10 years ago was ", "Ulysses S. Grant"),
+    ("The current president of the US is Theodore Roosevelt. The president 10 years ago was ", "Rutherford B. Hayes"),
+    ("The current president of the US is Woodrow Wilson. The president 10 years ago was ", "Grover Cleveland"),
+    ("The current president of the US is Calvin Coolidge. The president 10 years ago was ", "William McKinley"),
+    ("The current president of the US is Franklin D. Roosevelt. The president 10 years ago was ", "Woodrow Wilson"),
+    ("The current president of the US is Harry S. Truman. The president 10 years ago was ", "Calvin Coolidge"),
+    ("The current president of the US is Dwight D. Eisenhower. The president 10 years ago was ", "Franklin D. Roosevelt"),
+    ("The current president of the US is Lyndon B. Johnson. The president 10 years ago was ", "Harry S. Truman"),
+    ("The current president of the US is Richard Nixon. The president 10 years ago was ", "Dwight D. Eisenhower"),
+    ("The current president of the US is Jimmy Carter. The president 10 years ago was ", "Lyndon B. Johnson"),
+    ("The current president of the US is Ronald Reagan. The president 10 years ago was ", "John F. Kennedy"),
 ]
 
 def generate_task2b(prompts):
