@@ -257,7 +257,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
 
     os.makedirs(folder_path, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
-    df.to_csv(f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".csv")
+    df.to_csv(f"./"+folder_path+"/tracing_"+stream+timestamp+".csv")
 
 
 ###############################################
@@ -265,7 +265,7 @@ print("## LAST BUT NOT LEAST: PLOTTING :) ##")
 ###############################################
 
 for stream in ["block_output", "mlp_activation", "attention_output"]:
-    df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".csv")
+    df = pd.read_csv(f"./"+folder_path+"/tracing_"+stream+timestamp+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
     df["p("+SOLUTION+")"] = df["prob"].astype(float)
@@ -287,6 +287,6 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
 
     ggsave(
-        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".pdf", dpi=200 # suze edit
+        plot, filename=f"./"+folder_path+"/tracing_"+stream+timestamp+".pdf", dpi=200 # suze edit
     )
     print(plot)
