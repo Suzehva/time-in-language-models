@@ -1,0 +1,30 @@
+Prompt|Expected|Generated|Status
+The current president of the US is John F. Kennedy. The president 10 years ago was|Harry Truman| Bill Clinton. The president 20 years ago was George H. W. Bush. The president 30 years ago was Jimmy|
+The current president of the US is George Washington. The president 10 years ago was|None| Bill Clinton. The president 20 years ago was George Bush. The president 30 years ago was Ronald Reagan. The president|
+The current president of the US is Thomas Jefferson. The president 10 years ago was|John Adams|""" George W. Bush."|
+The current president of the US is James Madison. The president 10 years ago was|Thomas Jefferson| George W. Bush. The president 20 years ago was Ronald Reagan. The president 30 years ago was Richard Nixon.|
+The current president of the US is James Monroe. The president 10 years ago was|James Madison| Bill Clinton. The president 20 years ago was George Bush. The president 30 years ago was Ronald Reagan. The president|
+The current president of the US is Andrew Jackson. The president 10 years ago was|James Monroe| Bill Clinton. The president 20 years ago was George Bush. The president 30 years ago was Ronald Reagan. The president|
+The current president of the US is Martin Van Buren. The president 10 years ago was|John Quincy Adams| Bill Clinton. The president 20 years ago was Jimmy Carter. The president 30 years ago was Ronald Reagan. The president|
+The current president of the US is John Tyler. The president 10 years ago was|Andrew Jackson| George Bush. The president 20 years ago was Bill Clinton. The president 30 years ago was Jimmy Carter. The president|
+The current president of the US is James K. Polk. The president 10 years ago was|Andrew Jackson| Bill Clinton. The president in 2000 was George W. Bush. The president in 2008 was Barack Obama.|
+The current president of the US is Franklin Pierce. The president 10 years ago was|John Tyler|""" Bill Clinton."|
+The current president of the US is James Buchanan. The president 10 years ago was|James K. Polk| John Quincy Adams. The president 20 years ago was Franklin Delano Roosevelt. The president 30 years ago was Harry Truman|
+The current president of the US is Abraham Lincoln. The president 10 years ago was|Franklin Pierce| Bill Clinton. The president 20 years ago was George H.W. Bush. The president 30 years ago was Ronald Reagan|
+The current president of the US is Ulysses S. Grant. The president 10 years ago was|James Buchanan| Bill Clinton. The president 20 years ago was Jimmy Carter. The president 30 years ago was Richard Nixon. The president|
+The current president of the US is Rutherford B. Hayes. The president 10 years ago was|Abraham Lincoln| Jimmy Carter. The president 20 years ago was Ronald Reagan. The president 30 years ago was Gerald Ford. The president|
+The current president of the US is Benjamin Harrison. The president 10 years ago was|James Buchanan| Bill Clinton. The president 20 years ago was George Bush. The president 30 years ago was Jimmy Carter. The president|
+The current president of the US is William McKinley. The president 10 years ago was|Ulysses S. Grant| Richard Nixon. The president 20 years ago was Ronald Reagan. The president 30 years ago was Jimmy Carter. The president|
+The current president of the US is Theodore Roosevelt. The president 10 years ago was|Rutherford B. Hayes| George W Bush. The president 20 years ago was Ronald Reagan. The president 30 years ago was Richard Nixon. The|
+The current president of the US is Woodrow Wilson. The president 10 years ago was|Grover Cleveland| Ronald Reagan. The president 20 years ago was Jimmy Carter. The president 30 years ago was Gerald Ford. The president|
+The current president of the US is Calvin Coolidge. The president 10 years ago was|William McKinley| Bill Clinton. The president 20 years ago was Ronald Reagan. The president 30 years ago was John F. Kennedy.|
+The current president of the US is Franklin D. Roosevelt. The president 10 years ago was|Woodrow Wilson| Bill Clinton. The president 20 years ago was George Bush. The president 30 years ago was Jimmy Carter. The president|
+The current president of the US is Harry S. Truman. The president 10 years ago was|Calvin Coolidge| Richard Nixon. The president 20 years ago was George W. Bush. The president 30 years ago was Ronald Reagan.|
+The current president of the US is Dwight D. Eisenhower. The president 10 years ago was|Franklin D. Roosevelt| Bill Clinton. The president 20 years ago was George W. Bush. The president 30 years ago was Ronald Reagan.|
+The current president of the US is Lyndon B. Johnson. The president 10 years ago was|Harry S. Truman| Bill Clinton. The president 20 years ago was Jimmy Carter. The president 30 years ago was Gerald Ford. The president|
+The current president of the US is Richard Nixon. The president 10 years ago was|Dwight D. Eisenhower| Bill Clinton. The president 20 years ago was Ronald Reagan. The president 30 years ago was Jimmy Carter. The president|
+The current president of the US is Jimmy Carter. The president 10 years ago was|Lyndon B. Johnson| George W. Bush. The president 20 years ago was Bill Clinton. The president 30 years ago was Ronald Reagan.|
+The current president of the US is Ronald Reagan. The president 10 years ago was|John F. Kennedy| Bill Clinton. The president 10 years ago was George H.W. Bush. The president 10 years ago was George W|
+"
+
+Accuracy:0.0"|||

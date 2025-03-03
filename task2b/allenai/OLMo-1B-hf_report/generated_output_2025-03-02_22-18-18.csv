@@ -1,0 +1,30 @@
+Prompt|Expected|Generated|Status
+The current president of the US is John F. Kennedy. The president 10 years ago was|Harry Truman|""" Ronald Reagan."|
+The current president of the US is George Washington. The president 10 years ago was|None|""" Bill Clinton."|
+The current president of the US is Thomas Jefferson. The president 10 years ago was|John Adams|""" Bill Clinton."|
+The current president of the US is James Madison. The president 10 years ago was|Thomas Jefferson|""" Bill Clinton."|
+The current president of the US is James Monroe. The president 10 years ago was|James Madison|""" Bill Clinton."|
+The current president of the US is Andrew Jackson. The president 10 years ago was|James Monroe|""" Bill Clinton."|
+The current president of the US is Martin Van Buren. The president 10 years ago was|John Quincy Adams|""" Grover Cleveland."|
+The current president of the US is John Tyler. The president 10 years ago was|Andrew Jackson|""" William Henry Harrison."|
+The current president of the US is James K. Polk. The president 10 years ago was|Andrew Jackson|""" George W. Bush."|
+The current president of the US is Franklin Pierce. The president 10 years ago was|John Tyler|""" James Buchanan."|
+The current president of the US is James Buchanan. The president 10 years ago was|James K. Polk|""" Richard Nixon."|
+The current president of the US is Abraham Lincoln. The president 10 years ago was|Franklin Pierce|""" Bill Clinton."|
+The current president of the US is Ulysses S. Grant. The president 10 years ago was|James Buchanan|""" Richard Nixon."|
+The current president of the US is Rutherford B. Hayes. The president 10 years ago was|Abraham Lincoln|""" Calvin Coolidge."|
+The current president of the US is Benjamin Harrison. The president 10 years ago was|James Buchanan|""" Grover Cleveland."|
+The current president of the US is William McKinley. The president 10 years ago was|Ulysses S. Grant|""" Grover Cleveland."|
+The current president of the US is Theodore Roosevelt. The president 10 years ago was|Rutherford B. Hayes|""" Bill Clinton."|
+The current president of the US is Woodrow Wilson. The president 10 years ago was|Grover Cleveland|""" Bill Clinton."|
+The current president of the US is Calvin Coolidge. The president 10 years ago was|William McKinley|""" Herbert Hoover."|
+The current president of the US is Franklin D. Roosevelt. The president 10 years ago was|Woodrow Wilson|""" Bill Clinton."|
+The current president of the US is Harry S. Truman. The president 10 years ago was|Calvin Coolidge|""" Bill Clinton."|
+The current president of the US is Dwight D. Eisenhower. The president 10 years ago was|Franklin D. Roosevelt|""" George H.W. Bush."|
+The current president of the US is Lyndon B. Johnson. The president 10 years ago was|Harry S. Truman|""" George W. Bush."|
+The current president of the US is Richard Nixon. The president 10 years ago was|Dwight D. Eisenhower|""" Gerald Ford."|
+The current president of the US is Jimmy Carter. The president 10 years ago was|Lyndon B. Johnson|""" Ronald Reagan."|
+The current president of the US is Ronald Reagan. The president 10 years ago was|John F. Kennedy|""" George H.W. Bush."|
+"
+
+Accuracy:0.038461538461538464"|||
