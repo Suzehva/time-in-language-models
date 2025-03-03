@@ -99,22 +99,22 @@ colors={
 # BREAKS = [0, 1, 2, 3, 4, 5, 6]
 
 # 1980 PROMPT CONSTS
-# PROMPT = "In 1980 there"
-# PROMPT_LEN = 3
-# DIM_CORRUPTED_TOKENS = 2
-# CORRUPTED_TOKENS = [[[0, 1]]]
-# SOLUTION = " was"
-# CUSTOM_LABELS = ["In*", "1980*", "there"]
-# BREAKS = [0, 1, 2]
-
-# 2050 PROMPT CONSTS
-PROMPT = "In 2050 there"
+PROMPT = "In 1980 there"
 PROMPT_LEN = 3
 DIM_CORRUPTED_TOKENS = 2
 CORRUPTED_TOKENS = [[[0, 1]]]
-SOLUTION = " will"
-CUSTOM_LABELS = ["In*", "2050*", "there"]
+SOLUTION = " was"
+CUSTOM_LABELS = ["In*", "1980*", "there"]
 BREAKS = [0, 1, 2]
+
+# 2050 PROMPT CONSTS
+# PROMPT = "In 2050 there"
+# PROMPT_LEN = 3
+# DIM_CORRUPTED_TOKENS = 2
+# CORRUPTED_TOKENS = [[[0, 1]]]
+# SOLUTION = " will"
+# CUSTOM_LABELS = ["In*", "2050*", "there"]
+# BREAKS = [0, 1, 2]
 
 ##########################################
 print("## PART ONE: FACTUAL RECALL ##")
@@ -256,7 +256,7 @@ print("## LAST BUT NOT LEAST: PLOTTING :) ##")
 ###############################################
 
 for stream in ["block_output", "mlp_activation", "attention_output"]:
-    df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
+    df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
     df["p("+SOLUTION+")"] = df["prob"].astype(float)
