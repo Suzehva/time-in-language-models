@@ -219,7 +219,7 @@ print(token)
 for stream in ["block_output", "mlp_activation", "attention_output"]:
     data = []
     for layer_i in tqdm(range(olmo.config.num_hidden_layers)):  # aditi modif num_hidden_layers
-        for pos_i in range(PROMPT_LEN):  # TODO assuming the range had to do with prompt len. It was previously 7
+        for pos_i in range(PROMPT_LEN):
             config = restore_corrupted_with_interval_config(
                 layer_i, stream, 
                 window=1 if stream == "block_output" else 10, 
@@ -238,7 +238,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
                 },
             )
 
-            counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
+            counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
             distrib = embed_to_distrib(
                 olmo, counterfactual_outputs.last_hidden_state, logits=False
             )
@@ -246,9 +246,9 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
             data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
     df = pd.DataFrame(data) 
 
-    os.makedirs(folder_path, exist_ok=True) # aditi addition
+    os.makedirs(folder_path, exist_ok=True)
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
-    df.to_csv(f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".csv")
+    df.to_csv(f"./"+folder_path+"/tracing_"+stream+timestamp+".csv")
 
 
     ###############################################
@@ -276,7 +276,7 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
     )
 
     ggsave(
-        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".pdf", dpi=200 # suze edit
+        plot, filename=f"./"+folder_path+"/tracing_"+stream+timestamp+".pdf", dpi=200 # suze edit
     )
     print(plot)
 
