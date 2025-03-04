@@ -34,23 +34,40 @@ from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
 class CausalTracer:
-    def __init__(self, model_id):
+    def __init__(self, model_id, device=None):
         self.model_id = model_id
+        # Initialize the device (GPU or MPS [for apple silicon] or CPU)
+        self.device = device if device else ("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
+        print(f'Using device: {self.device}')
+        if self.model_id == "allenai/OLMo-1B-hf":
+            self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) # create_gpt2(name="gpt2-xl")
+        else:
+           error(f'only olmo is supported at this time') 
+        self.model.to(self.device)
 
 
-    def learn_relevant_vocab(self, model_id: str, words_of_interest:List[str]):
+    def learn_relevant_vocab(self, model_id: str, words_of_interest:list[str]):
         pass
         # TODO: Aditi
 
-    def factual_recall(self, model_id)
+    def factual_recall(self, prompt:str):
+        print("factual recall: \n")
+        inputs = [
+            self.tokenizer(prompt, return_tensors="pt").to(self.device),
+        ]
+        res = self.model.model(**inputs[0])  # use self.model.model to get the BASE output instead of the CAUSAL output
+        print(prompt)
+        distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
+        top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
     
         
 def main():
+    tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")
+    tracer.factual_recall(prompt="The Space Needle is in downtown")
 
 if __name__ == "__main__":
     main()
-    tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")
 
 
 #-------------------------------
@@ -115,27 +132,8 @@ BREAKS = [0, 1, 2]
 # CUSTOM_LABELS = ["In*", "2050*", "there"]
 # BREAKS = [0, 1, 2]
 
-##########################################
-print("## PART ONE: FACTUAL RECALL ##")
-##########################################
 
-model_name = "allenai/OLMo-1B-hf"  # autoregressive model 
 
-device = "cuda:0" if torch.cuda.is_available() else "cpu"
-config, tokenizer, olmo = create_olmo(name=model_name) # create_gpt2(name="gpt2-xl")
-
-# config.output_hidden_states = True # aditi addition
-
-olmo.to(device)
-
-base = PROMPT
-inputs = [
-    tokenizer(base, return_tensors="pt").to(device),
-]
-res = olmo.model(**inputs[0])  # use olmo.model to get the BASE output instead of the CAUSAL output
-print(base)
-distrib = embed_to_distrib(olmo, res.last_hidden_state, logits=False)
-top_vals(tokenizer, distrib[0][-1], n=10)
 
 
 ##########################################
