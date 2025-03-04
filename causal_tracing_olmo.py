@@ -33,6 +33,25 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
+# for corrupted run
+class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
+    def __init__(self, embed_dim, **kwargs):
+        super().__init__()
+        self.interchange_dim = embed_dim
+        rs = np.random.RandomState(1)
+        prng = lambda *shape: rs.randn(*shape)
+        self.noise = torch.from_numpy(
+            prng(1, DIM_CORRUPTED_TOKENS, embed_dim)).to(device)
+        self.noise_level = 0.13462981581687927
+
+    def forward(self, base, source=None, subspaces=None):
+        base[..., : self.interchange_dim] += self.noise * self.noise_level
+        return base
+
+    def __str__(self):
+        return f"NoiseIntervention(embed_dim={self.embed_dim})"
+
+
 class CausalTracer:
     def __init__(self, model_id, device=None):
         self.model_id = model_id
@@ -42,7 +61,7 @@ class CausalTracer:
         if self.model_id == "allenai/OLMo-1B-hf":
             self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) # create_gpt2(name="gpt2-xl")
         else:
-           error(f'only olmo is supported at this time') 
+           os.error(f'only olmo is supported at this time') 
         self.model.to(self.device)
 
 
@@ -51,7 +70,7 @@ class CausalTracer:
         # TODO: Aditi
 
     def factual_recall(self, prompt:str):
-        print("factual recall: \n")
+        print("FACTUAL RECALL:")
         inputs = [
             self.tokenizer(prompt, return_tensors="pt").to(self.device),
         ]
@@ -59,6 +78,20 @@ class CausalTracer:
         print(prompt)
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
+
+    def corrupted_run(self, prompt: str):
+        print("CORRUPTED RUN: ")
+        base = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        if model_id == "allenai/OLMo-1B-hf":
+            config = corrupted_config(type(olmo))
+        else: 
+            os.error(f'only olmo is supported at this time') 
+
+        # intervenable = IntervenableModel(config, olmo)
+
+        # _, counterfactual_outputs = intervenable(
+        #     base, unit_locations={"base": (CORRUPTED_TOKENS)}  # defines which positions get corrupted
+        # )
 
     
         
@@ -71,12 +104,6 @@ if __name__ == "__main__":
 
 
 #-------------------------------
-
-
-
-
-
-
 
 mpl.rcParams['figure.figsize'] = (6, 4)  # Set default figure size
 mpl.rcParams['svg.fonttype'] = 'none'  # Keep text as text in SVGs
@@ -134,29 +161,6 @@ BREAKS = [0, 1, 2]
 
 
 
-
-
-##########################################
-print("## PART TWO: CORRUPTED RUN ##")
-##########################################
-
-class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
-    def __init__(self, embed_dim, **kwargs):
-        super().__init__()
-        self.interchange_dim = embed_dim
-        rs = np.random.RandomState(1)
-        prng = lambda *shape: rs.randn(*shape)
-        self.noise = torch.from_numpy(
-            prng(1, DIM_CORRUPTED_TOKENS, embed_dim)).to(device)
-        self.noise_level = 0.13462981581687927
-
-    def forward(self, base, source=None, subspaces=None):
-        base[..., : self.interchange_dim] += self.noise * self.noise_level
-        return base
-
-    def __str__(self):
-        return f"NoiseIntervention(embed_dim={self.embed_dim})"
-
 def corrupted_config(model_type):
     config = IntervenableConfig(
         model_type=model_type,
@@ -170,13 +174,7 @@ def corrupted_config(model_type):
     )
     return config
 
-base = tokenizer(PROMPT, return_tensors="pt").to(device)
-config = corrupted_config(type(olmo))
-intervenable = IntervenableModel(config, olmo)
 
-_, counterfactual_outputs = intervenable(
-    base, unit_locations={"base": (CORRUPTED_TOKENS)}  # defines which positions get corrupted
-)
 
 # see edits in intervenable_base.py
 # counterfactual_outputs.hidden_states[-1] is sketchy and NOTE to fix it!
