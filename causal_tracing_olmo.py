@@ -93,25 +93,34 @@ class CausalTracer:
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
-    def corrupted_run(self, prompt: str):
+    def corrupted_run(self, prompt: str, corrupted_tokens):
         print("CORRUPTED RUN: ")
         base = self.tokenizer(prompt, return_tensors="pt").to(self.device)
-        if model_id == "allenai/OLMo-1B-hf":
-            config = corrupted_config(type(olmo))
-        else: 
-            os.error(f'only olmo is supported at this time') 
-
-        # intervenable = IntervenableModel(config, olmo)
-
-        # _, counterfactual_outputs = intervenable(
-        #     base, unit_locations={"base": (CORRUPTED_TOKENS)}  # defines which positions get corrupted
-        # )
+        config = IntervenableConfig(
+            model_type=type(self.model_id),
+            representations=[
+                RepresentationConfig(
+                    0,              # layer
+                    "block_input",  # intervention type
+                ),
+            ],
+            intervention_types=NoiseIntervention,
+        )
+        intervenable = IntervenableModel(config, self.model_id)
+        _, counterfactual_outputs = intervenable(
+            base, unit_locations={"base": (corrupted_tokens)}  # defines which positions get corrupted
+        )
+        # TODO: counterfactual_outputs.hidden_states[-1] is sketchy, fix it!
+        counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
+        distrib = embed_to_distrib(self.model_id, counterfactual_outputs.last_hidden_state, logits=False)
+        top_vals(self.tokenizer, distrib[0][-1], n=10)
 
     
         
 def main():
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")
     tracer.factual_recall(prompt="The Space Needle is in downtown")
+    tracer.corrupted_run(prompt=?, corrupted_tokens=[[[0, 1, 2, 3]]])
 
 if __name__ == "__main__":
     main()
@@ -172,30 +181,6 @@ BREAKS = [0, 1, 2]
 # SOLUTION = " will"
 # CUSTOM_LABELS = ["In*", "2050*", "there"]
 # BREAKS = [0, 1, 2]
-
-
-
-def corrupted_config(model_type):
-    config = IntervenableConfig(
-        model_type=model_type,
-        representations=[
-            RepresentationConfig(
-                0,              # layer
-                "block_input",  # intervention type
-            ),
-        ],
-        intervention_types=NoiseIntervention,
-    )
-    return config
-
-
-
-# see edits in intervenable_base.py
-# counterfactual_outputs.hidden_states[-1] is sketchy and NOTE to fix it!
-counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
-distrib = embed_to_distrib(olmo, counterfactual_outputs.last_hidden_state, logits=False)
-top_vals(tokenizer, distrib[0][-1], n=10)
-
 
 ##########################################
 print("## PART THREE: RESTORED RUN ##")
