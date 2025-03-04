@@ -107,9 +107,98 @@ class CausalTracer:
         #     base, unit_locations={"base": (CORRUPTED_TOKENS)}  # defines which positions get corrupted
         # )
 
-    
+    def restore_run(self, timestamp: str, ):
+
+        # should finish within 1 min with a standard 12G GPU
+        token = self.tokenizer.encode(SOLUTION)[0]  # 16335
+        print(token)
+
+        for stream in ["block_output", "mlp_activation", "attention_output"]:
+            data = []
+            for layer_i in tqdm(range(olmo.config.num_hidden_layers)):  # aditi modif num_hidden_layers
+                for pos_i in range(PROMPT_LEN):
+                    config = restore_corrupted_with_interval_config(
+                        layer_i, stream, 
+                        window=1 if stream == "block_output" else 10, 
+                        num_layers=olmo.config.num_hidden_layers
+                    )
+                    n_restores = len(config.representations) - 1
+                    intervenable = IntervenableModel(config, olmo)
+                    _, counterfactual_outputs = intervenable(
+                        base,
+                        [None] + [base]*n_restores,
+                        {
+                            "sources->base": (
+                                [None] + [[[pos_i]]]*n_restores,
+                                CORRUPTED_TOKENS + [[[pos_i]]]*n_restores,
+                            )
+                        },
+                    )
+
+                    counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
+                    distrib = embed_to_distrib(
+                        olmo, counterfactual_outputs.last_hidden_state, logits=False
+                    )
+                    prob = distrib[0][-1][token].detach().cpu().item()
+                    data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
+            df = pd.DataFrame(data) 
+
+            os.makedirs(folder_path, exist_ok=True)
+            df.to_csv(f"./"+folder_path+"/"+PROMPT+stream+timestamp+".csv")
+            self.plot(self, timestamp, stream)
+
+    def plot(self, timestamp: str, stream: str):
+        df = pd.read_csv(f"./"+folder_path+"/"+PROMPT+stream+timestamp+".csv")
+        df["layer"] = df["layer"].astype(int)
+        df["pos"] = df["pos"].astype(int)
+        df["p("+SOLUTION+")"] = df["prob"].astype(float)
+
+        custom_labels = CUSTOM_LABELS
+        breaks = BREAKS
+
+        plot = (
+            ggplot(df, aes(x="layer", y="pos"))    
+
+            + geom_tile(aes(fill="p("+SOLUTION+")"))
+            + scale_fill_cmap(colors[stream]) + xlab(titles[stream])
+            + scale_y_reverse(
+                limits = (-0.5, 6.5), 
+                breaks=breaks, labels=custom_labels) 
+            + theme(figure_size=(5, 4)) + ylab("") 
+            + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
+        )
+
+        ggsave(
+            plot, filename=f"./"+folder_path+"/"+PROMPT+stream+timestamp+".pdf", dpi=200 # suze edit
+        )
+        print(plot)
+
+
+
+
+def restore_corrupted_with_interval_config(
+    layer, stream="mlp_activation", window=10, num_layers=48):
+    start = max(0, layer - window // 2)
+    end = min(num_layers, layer - (-window // 2))
+    config = IntervenableConfig(
+        representations=[
+            RepresentationConfig(
+                0,       # layer
+                "block_input",  # intervention type
+            ),
+        ] + [
+            RepresentationConfig(
+                i,       # layer
+                stream,  # intervention type
+        ) for i in range(start, end)],
+        intervention_types=\
+            [NoiseIntervention]+[VanillaIntervention]*(end-start),
+    )
+    return config
+
         
 def main():
+    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")
     tracer.factual_recall(prompt="The Space Needle is in downtown")
 
@@ -195,97 +284,4 @@ def corrupted_config(model_type):
 counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
 distrib = embed_to_distrib(olmo, counterfactual_outputs.last_hidden_state, logits=False)
 top_vals(tokenizer, distrib[0][-1], n=10)
-
-
-##########################################
-print("## PART THREE: RESTORED RUN ##")
-##########################################
-
-def restore_corrupted_with_interval_config(
-    layer, stream="mlp_activation", window=10, num_layers=48):
-    start = max(0, layer - window // 2)
-    end = min(num_layers, layer - (-window // 2))
-    config = IntervenableConfig(
-        representations=[
-            RepresentationConfig(
-                0,       # layer
-                "block_input",  # intervention type
-            ),
-        ] + [
-            RepresentationConfig(
-                i,       # layer
-                stream,  # intervention type
-        ) for i in range(start, end)],
-        intervention_types=\
-            [NoiseIntervention]+[VanillaIntervention]*(end-start),
-    )
-    return config
-
-# should finish within 1 min with a standard 12G GPU
-token = tokenizer.encode(SOLUTION)[0]  # 16335
-print(token)
-
-for stream in ["block_output", "mlp_activation", "attention_output"]:
-    data = []
-    for layer_i in tqdm(range(olmo.config.num_hidden_layers)):  # aditi modif num_hidden_layers
-        for pos_i in range(PROMPT_LEN):
-            config = restore_corrupted_with_interval_config(
-                layer_i, stream, 
-                window=1 if stream == "block_output" else 10, 
-                num_layers=olmo.config.num_hidden_layers
-            )
-            n_restores = len(config.representations) - 1
-            intervenable = IntervenableModel(config, olmo)
-            _, counterfactual_outputs = intervenable(
-                base,
-                [None] + [base]*n_restores,
-                {
-                    "sources->base": (
-                        [None] + [[[pos_i]]]*n_restores,
-                        CORRUPTED_TOKENS + [[[pos_i]]]*n_restores,
-                    )
-                },
-            )
-
-            counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
-            distrib = embed_to_distrib(
-                olmo, counterfactual_outputs.last_hidden_state, logits=False
-            )
-            prob = distrib[0][-1][token].detach().cpu().item()
-            data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
-    df = pd.DataFrame(data) 
-
-    os.makedirs(folder_path, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
-    df.to_csv(f"./"+folder_path+"/"+PROMPT+stream+timestamp+".csv")
-
-
-    ###############################################
-    print("## PLOTTING :) ##")
-    ###############################################
-
-    df = pd.read_csv(f"./"+folder_path+"/"+PROMPT+stream+timestamp+".csv")
-    df["layer"] = df["layer"].astype(int)
-    df["pos"] = df["pos"].astype(int)
-    df["p("+SOLUTION+")"] = df["prob"].astype(float)
-
-    custom_labels = CUSTOM_LABELS
-    breaks = BREAKS
-
-    plot = (
-        ggplot(df, aes(x="layer", y="pos"))    
-
-        + geom_tile(aes(fill="p("+SOLUTION+")"))
-        + scale_fill_cmap(colors[stream]) + xlab(titles[stream])
-        + scale_y_reverse(
-            limits = (-0.5, 6.5), 
-            breaks=breaks, labels=custom_labels) 
-        + theme(figure_size=(5, 4)) + ylab("") 
-        + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
-    )
-
-    ggsave(
-        plot, filename=f"./"+folder_path+"/"+PROMPT+stream+timestamp+".pdf", dpi=200 # suze edit
-    )
-    print(plot)
 
