@@ -70,14 +70,13 @@ class CausalTracer:
         Returns a list of strings based on how the model tokenizes the prompt
         Note: there could be multiple token id's for a word
         """
-        tokenizer = AutoTokenizer.from_pretrained(self.model_id)
         token_list = []
         
         for word in prompt:
             # get id's that correspond to a word and its subwords
-            token_ids = tokenizer(word, add_special_tokens=False)["input_ids"] 
+            token_ids = self.tokenizer(word, add_special_tokens=False)["input_ids"] 
             # get tokens that each id corresponds to. 
-            token_pieces = tokenizer.convert_ids_to_tokens(token_ids) 
+            token_pieces = self.tokenizer.convert_ids_to_tokens(token_ids) 
             token_list += token_pieces
         return token_list
     
