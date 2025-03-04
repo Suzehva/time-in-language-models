@@ -33,14 +33,32 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
+from transformers import AutoTokenizer
+
+
 class CausalTracer:
     def __init__(self):
         pass
 
+    def num_tokens_in_vocab(self, prompt: list[str]):
+        """
+        Returns a list of strings based on how the model tokenizes the prompt
+        Note: there could be multiple token id's for a word
+        """
+        tokenizer = AutoTokenizer.from_pretrained(self.model_id)
+        token_list = []
+        
+        for word in prompt:
+            # get id's that correspond to a word and its subwords
+            token_ids = tokenizer(word, add_special_tokens=False)["input_ids"] 
+            # get tokens that each id corresponds to. 
+            token_pieces = tokenizer.convert_ids_to_tokens(token_ids) 
+            token_list += token_pieces
+        return token_list
+    
+    def list_from_prompt(self, prompt: str):
+        return prompt.split(" ")
 
-    def learn_relevant_vocab(self, model_id: str, words_of_interest:List[str]):
-        pass
-        # TODO: Aditi
         
 
 
