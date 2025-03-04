@@ -34,15 +34,26 @@ from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
 class CausalTracer:
-    def __init__(self):
-        pass
+    def __init__(self, model_id):
+        self.model_id = model_id
 
 
     def learn_relevant_vocab(self, model_id: str, words_of_interest:List[str]):
         pass
         # TODO: Aditi
-        
 
+    def factual_recall(self, model_id)
+
+    
+        
+def main():
+
+if __name__ == "__main__":
+    main()
+    tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")
+
+
+#-------------------------------
 
 
 
