@@ -1,7 +1,7 @@
 # https://stanfordnlp.github.io/pyvene/tutorials/advanced_tutorials/Causal_Tracing.html
 
-import os # aditi addition
-import datetime # suze addition
+import os
+import datetime
 import torch
 import pandas as pd
 import numpy as np
@@ -33,30 +33,15 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
-# for corrupted run
-class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
-    def __init__(self, embed_dim, **kwargs):
-        super().__init__()
-        self.interchange_dim = embed_dim
-        rs = np.random.RandomState(1)
-        prng = lambda *shape: rs.randn(*shape)
-        self.noise = torch.from_numpy(
-            prng(1, DIM_CORRUPTED_TOKENS, embed_dim)).to(device)
-        self.noise_level = 0.13462981581687927
-
-    def forward(self, base, source=None, subspaces=None):
-        base[..., : self.interchange_dim] += self.noise * self.noise_level
-        return base
-
-    def __str__(self):
-        return f"NoiseIntervention(embed_dim={self.embed_dim})"
+#DIM_CORRUPTED_TOKENS = 4 # TODO: figure out how to make this work
 
 
 class CausalTracer:
     def __init__(self, model_id, device=None):
         self.model_id = model_id
         # Initialize the device (GPU or MPS [for apple silicon] or CPU)
-        self.device = device if device else ("cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu"))
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"global DEVICE
+        DEVICE = self.device # TODO: fix this so it's not necessary 
         print(f'Using device: {self.device}')
         if self.model_id == "allenai/OLMo-1B-hf":
             self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) # create_gpt2(name="gpt2-xl")
@@ -93,7 +78,26 @@ class CausalTracer:
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
-    def corrupted_run(self, prompt: str, corrupted_tokens):
+    def corrupted_run(self, prompt: str, corrupted_tokens, dim_corrupted_tokens:int):
+        DEVICE = self.device # TODO: make this less horrible
+        class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
+            def __init__(self, embed_dim, **kwargs):
+                super().__init__()
+                self.interchange_dim = embed_dim
+                rs = np.random.RandomState(1)
+                prng = lambda *shape: rs.randn(*shape)
+                self.noise = torch.from_numpy(
+                    prng(1, dim_corrupted_tokens, embed_dim)).to(DEVICE)
+                self.noise_level = 0.13462981581687927
+
+            def forward(self, base, source=None, subspaces=None):
+                base[..., : self.interchange_dim] += self.noise * self.noise_level
+                return base
+
+            def __str__(self):
+                return f"NoiseIntervention(embed_dim={self.embed_dim})"
+
+
         print("CORRUPTED RUN: ")
         base = self.tokenizer(prompt, return_tensors="pt").to(self.device)
         config = IntervenableConfig(
@@ -106,7 +110,7 @@ class CausalTracer:
             ],
             intervention_types=NoiseIntervention,
         )
-        intervenable = IntervenableModel(config, self.model_id)
+        intervenable = IntervenableModel(config, self.model)
         _, counterfactual_outputs = intervenable(
             base, unit_locations={"base": (corrupted_tokens)}  # defines which positions get corrupted
         )
@@ -208,8 +212,8 @@ def restore_corrupted_with_interval_config(
 def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")
-    tracer.factual_recall(prompt="The Space Needle is in downtown")
-    tracer.corrupted_run(prompt=?, corrupted_tokens=[[[0, 1, 2, 3]]])
+    #tracer.factual_recall(prompt="The Space Needle is in downtown")
+    tracer.corrupted_run(prompt="The Space Needle is in downtown", corrupted_tokens=[[[0, 1, 2, 3]]], dim_corrupted_tokens=4)
 
 if __name__ == "__main__":
     main()
