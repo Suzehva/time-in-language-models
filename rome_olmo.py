@@ -99,12 +99,22 @@ colors={
 # BREAKS = [0, 1, 2, 3, 4, 5, 6]
 
 # 1980 PROMPT CONSTS
-PROMPT = "In 1980 there"
+# PROMPT = "In 1980 there"
+# PROMPT_LEN = 3
+# DIM_CORRUPTED_TOKENS = 2
+# CORRUPTED_TOKENS = [[[0, 1]]]
+# SOLUTION = " was"
+# CUSTOM_LABELS = ["In*", "1980*", "there"]
+# BREAKS = [0, 1, 2]
+
+
+# 2020 PROMPT CONSTS
+PROMPT = "In 2020 there"
 PROMPT_LEN = 3
 DIM_CORRUPTED_TOKENS = 2
 CORRUPTED_TOKENS = [[[0, 1]]]
-SOLUTION = " was"
-CUSTOM_LABELS = ["In*", "1980*", "there"]
+SOLUTION = " is"
+CUSTOM_LABELS = ["In*", "2020*", "there"]
 BREAKS = [0, 1, 2]
 
 # 2050 PROMPT CONSTS
