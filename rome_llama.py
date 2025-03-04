@@ -1,14 +1,10 @@
 # https://stanfordnlp.github.io/pyvene/tutorials/advanced_tutorials/Causal_Tracing.html
+import os # aditi addition
+import datetime # suze addition
 
-
-### THIS FILE IS NOT FUNCTIONAL ###
-
-
-import pyvene
+# ------------------------------------------------------------------------------
 
 import torch
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
-
 import pandas as pd
 import numpy as np
 from pyvene import embed_to_distrib, top_vals, format_token
@@ -20,16 +16,12 @@ from pyvene import (
     ConstantSourceIntervention,
     LocalistRepresentationIntervention
 )
+from pyvene import create_llama
 
-from torch import nn
-sm = nn.Softmax(dim=-1)
-lsm = nn.LogSoftmax(dim=-1)
-
-# %config InlineBackend.figure_formats = ['svg']
 import matplotlib as mpl
-
 mpl.rcParams['figure.figsize'] = (6, 4)  # Set default figure size
 mpl.rcParams['svg.fonttype'] = 'none'  # Keep text as text in SVGs
+
 from plotnine import (
     ggplot,
     geom_tile,
@@ -46,8 +38,11 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
+folder_path = "pyvene_data_llama_time"
+
+
 titles={
-    "block_output": "single restored layer in GPT2-XL",
+    "block_output": "single restored layer in LLAMA 1B",
     "mlp_activation": "center of interval of 10 patched mlp layer",
     "attention_output": "center of interval of 10 patched attn layer"
 }
@@ -58,48 +53,29 @@ colors={
     "attention_output": "Reds"
 } 
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
+##########################################
+print("## PART ONE: FACTUAL RECALL ##")
+##########################################
 
-
-# MODEL SETUP
 model_name = "meta-llama/Llama-3.2-1B"  # autoregressive model 
-config = AutoConfig.from_pretrained(model_name)
-tokenizer = AutoTokenizer.from_pretrained(model_name)
-model = AutoModelForCausalLM.from_pretrained(model_name).to(device)
 
-##########################################################################
-##  PART 1: FACTUAL RECALL 
-##########################################################################
-print("\nBEGINNING PART 1: FACTUAL RECALL\n")
+device = "cuda:0" if torch.cuda.is_available() else "cpu"
+config, tokenizer, llama = create_llama(name=model_name)
+
+llama.to(device)
 
 base = "The Space Needle is in downtown"
-inputs = [tokenizer(base, return_tensors="pt").to(device),]
-res = model(**inputs[0])
+inputs = [
+    tokenizer(base, return_tensors="pt").to(device),
+]
+res = llama.model(**inputs[0])  # use llama.model to get the BASE output instead of the CAUSAL output
+distrib = embed_to_distrib(llama, res.last_hidden_state, logits=False)
+top_vals(tokenizer, distrib[0][-1], n=10)
 
-# instead of using the provided distr function (doesn't work on tiny LLAMA or OLMO)
-#  distrib = embed_to_distrib(model, res.logits, logits=False) # for generation models # aditi added this 
-logits = res.logits[0, -1, :]  # Get the last token's logits (for "downtown")
-distrib = sm(res.logits) 
 
-top_vals(tokenizer, distrib[0, -1], n=10)
-
-##########################################################################
-##  PART 2: CORRUPTED RUN
-##########################################################################
-print("\nBEGINNING PART 2: CORRUPTED RUN\n")
-
-# slightly working...
-        # Intervention key: layer_0_comp_block_input_unit_pos_nunit_1#0
-        # _and                 0.09548791497945786
-        # _is                  0.06283295899629593
-        # _downtown            0.0499887578189373
-        # _in                  0.04853437840938568
-        # _department          0.030326135456562042
-        # _right               0.016650980338454247
-        # _are                 0.014145351946353912
-        # _city                0.013409560546278954
-        # _today               0.010750866495072842
-        # _world               0.009167429059743881
+##########################################
+print("## PART TWO: CORRUPTED RUN ##")
+##########################################
 
 class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
     def __init__(self, embed_dim, **kwargs):
@@ -131,55 +107,24 @@ def corrupted_config(model_type):
     )
     return config
 
-def embed_to_distrib_llama(model, embed, log=False, logits=False):
-    """Convert an embedding to a distribution over the vocabulary"""
-    if "gpt2" in model.config.architectures[0].lower():
-        with torch.inference_mode():
-            vocab = torch.matmul(embed, model.wte.weight.t())
-    elif "llama" in model.config.architectures[0].lower():  ## llama case modified by aditi
-        with torch.inference_mode():
-            vocab = torch.matmul(embed, model.lm_head.weight.t()) ## equivalent of GPT's model.wte
-    else:
-        raise ValueError("Unsupported model architecture")
-
-    if logits:
-        return vocab
-    return lsm(vocab) if log else sm(vocab)
-
 base = tokenizer("The Space Needle is in downtown", return_tensors="pt").to(device)
-config = corrupted_config(type(model))
-config.output_hidden_states = True # aditi addition
-
-intervenable = IntervenableModel(config, model)
-
-# IMPLEMENT THIS HACK IN THE PYVENE LIBRARY!!
-# my env is called time, so for me its under:
-#   /Users/aditi/Documents/cs224n-time/time/lib/python3.12/site-packages/pyvene
-# I modified line 1952 and 1953 in intervenable_base.py (imported file) like so:
-#    if 'output_hidden_states' in self.model.config:  # aditi addition 
-#        model_kwargs["output_hidden_states"] = True  # aditi addition 
-#    icounterfactual_outputs = self.model(**base, **model_kwargs)
+config = corrupted_config(type(llama))
+intervenable = IntervenableModel(config, llama)
 
 _, counterfactual_outputs = intervenable(
     base, unit_locations={"base": ([[[0, 1, 2, 3]]])}
 )
 
-# get the LAST hidden state. 
-last_hidden_state = counterfactual_outputs.hidden_states[-1]
-
-distrib = embed_to_distrib_llama(model, last_hidden_state, logits=False)
+# see edits in intervenable_base.py
+# counterfactual_outputs.hidden_states[-1] is sketchy and NOTE to fix it!
+counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
+distrib = embed_to_distrib(llama, counterfactual_outputs.last_hidden_state, logits=False)
 top_vals(tokenizer, distrib[0][-1], n=10)
 
-##########################################################################
-##   PART 3: RESTORED RUN
-##########################################################################
-print("\nBEGINNING PART 3: RESTORED RUN\n")
 
-## CONTINUE NOTE:
-# Currently on part 3
-# the number of hidden layers in the model don't match up
-
-from pyvene.models.interventions import NoiseIntervention
+##########################################
+print("## PART THREE: RESTORED RUN ##")
+##########################################
 
 def restore_corrupted_with_interval_config(
     layer, stream="mlp_activation", window=10, num_layers=48):
@@ -202,24 +147,20 @@ def restore_corrupted_with_interval_config(
     return config
 
 # should finish within 1 min with a standard 12G GPU
-token = tokenizer.encode(" Seattle")[0]  # 128000
-# token = tokenizer.encode(" HELLO")[0]  # 128000  # NOTE: slightly concerning that different inputs give same tokens??!!
+token = tokenizer.encode(" Seattle")[0]  # 16335
 print(token)
 
 for stream in ["block_output", "mlp_activation", "attention_output"]:
     data = []
-    use_range = (model.config.num_hidden_layers) # for llama # aditi addition
-    # range(gpt.config.n_layer) for gpt
-    for layer_i in tqdm(range(min(use_range, 16))):  # TODO GET RID OF 16 bc its hacky !?
+    for layer_i in tqdm(range(llama.config.num_hidden_layers)):  # aditi modif num_hidden_layers
         for pos_i in range(7):
             config = restore_corrupted_with_interval_config(
                 layer_i, stream, 
-                window=1 if stream == "block_output" else 10
+                window=1 if stream == "block_output" else 10, 
+                num_layers=llama.config.num_hidden_layers
             )
-            config.output_hidden_states = True # aditi addition
-
             n_restores = len(config.representations) - 1
-            intervenable = IntervenableModel(config, model)
+            intervenable = IntervenableModel(config, llama)
             _, counterfactual_outputs = intervenable(
                 base,
                 [None] + [base]*n_restores,
@@ -230,20 +171,25 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
                     )
                 },
             )
-            last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
-            distrib = embed_to_distrib_llama(
-                model, last_hidden_state, logits=False
+
+            counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
+            distrib = embed_to_distrib(
+                llama, counterfactual_outputs.last_hidden_state, logits=False
             )
             prob = distrib[0][-1][token].detach().cpu().item()
             data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
-    df = pd.DataFrame(data)
-    import os  # aditi addition to create dir
-    os.makedirs("tutorial_data", exist_ok=True) # aditi addition to create dir
-    df.to_csv(f"./tutorial_data/pyvene_rome_{stream}.csv")
+    df = pd.DataFrame(data) 
 
-# Graphing
+    os.makedirs(folder_path, exist_ok=True) # aditi addition
+    df.to_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
+
+
+###############################################
+print("## LAST BUT NOT LEAST: PLOTTING :) ##")
+###############################################
+
 for stream in ["block_output", "mlp_activation", "attention_output"]:
-    df = pd.read_csv(f"./tutorial_data/pyvene_rome_{stream}.csv")
+    df = pd.read_csv(f"./"+folder_path+"/pyvene_rome_"+stream+".csv")
     df["layer"] = df["layer"].astype(int)
     df["pos"] = df["pos"].astype(int)
     df["p(Seattle)"] = df["prob"].astype(float)
@@ -262,7 +208,10 @@ for stream in ["block_output", "mlp_activation", "attention_output"]:
         + theme(figure_size=(5, 4)) + ylab("") 
         + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
     )
+    timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S") # suze addition
+
     ggsave(
-        plot, filename=f"./tutorial_data/pyvene_rome_{stream}.pdf", dpi=200
+        plot, filename=f"./"+folder_path+"/pyvene_rome_"+stream+timestamp+".pdf", dpi=200 # suze edit
     )
     print(plot)
+
