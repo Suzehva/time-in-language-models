@@ -45,6 +45,7 @@ class Prompt:
     dim_corrupted_tokens: int
     corrupted_tokens: list[list]
     soln: str
+    list_of_soln: list[list[str]]
     descriptive_label: str
     custom_labels: list[str]
     breaks: list[int]
@@ -162,51 +163,58 @@ class CausalTracer:
         print("RESTORED RUN:")
         print(prompt.prompt)
 
-        token = self.tokenizer.encode(prompt.soln)[0]  
-        print(token)
+        for solns in prompt.list_of_soln:
+            tokens = [self.tokenizer.encode(soln)[0] for soln in solns]
+            print("\n\n\nsolns pre-encoded" + str(solns))
+            print("\n\n\ntoken encoded" + str(tokens))
 
-        for stream in ["block_output", "mlp_activation", "attention_output"]:
-            data = []
-            for layer_i in tqdm(range(self.model.config.num_hidden_layers)):
-                for pos_i in range(prompt.prompt_len):
-                    config = restore_corrupted_with_interval_config(
-                        layer=layer_i,
-                        device=self.device, 
-                        dim_corrupted_tokens=prompt.dim_corrupted_tokens,
-                        stream=stream, 
-                        window=1 if stream == "block_output" else 10, 
-                        num_layers=self.model.config.num_hidden_layers,      
-                    )
-                    n_restores = len(config.representations) - 1
-                    intervenable = IntervenableModel(config, self.model)
-                    _, counterfactual_outputs = intervenable(
-                        base,
-                        [None] + [base]*n_restores,
-                        {
-                            "sources->base": (
-                                [None] + [[[pos_i]]]*n_restores,
-                                prompt.corrupted_tokens + [[[pos_i]]]*n_restores,
-                            )
-                        },
-                    )
+            for stream in ["block_output", "mlp_activation", "attention_output"]:
+                data = []
+                for layer_i in tqdm(range(self.model.config.num_hidden_layers)):
+                    for pos_i in range(prompt.prompt_len):
+                        config = restore_corrupted_with_interval_config(
+                            layer=layer_i,
+                            device=self.device, 
+                            dim_corrupted_tokens=prompt.dim_corrupted_tokens,
+                            stream=stream, 
+                            window=1 if stream == "block_output" else 10, 
+                            num_layers=self.model.config.num_hidden_layers,      
+                        )
+                        n_restores = len(config.representations) - 1
+                        intervenable = IntervenableModel(config, self.model)
+                        _, counterfactual_outputs = intervenable(
+                            base,
+                            [None] + [base]*n_restores,
+                            {
+                                "sources->base": (
+                                    [None] + [[[pos_i]]]*n_restores,
+                                    prompt.corrupted_tokens + [[[pos_i]]]*n_restores,
+                                )
+                            },
+                        )
 
-                    counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
-                    distrib = embed_to_distrib(
-                        self.model, counterfactual_outputs.last_hidden_state, logits=False
-                    )
-                    prob = distrib[0][-1][token].detach().cpu().item()
-                    data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
-            df = pd.DataFrame(data) 
+                        counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
+                        distrib = embed_to_distrib(
+                            self.model, counterfactual_outputs.last_hidden_state, logits=False
+                        )
 
-            os.makedirs(self.folder_path, exist_ok=True)
-            df.to_csv(f"./"+self.folder_path+"/"+prompt.descriptive_label+stream+timestamp+".csv")
-            self.plot(prompt, timestamp, stream)
+                        # can sum over multiple words' tokens instead of just one
+                        prob = sum(distrib[0][-1][token].detach().cpu().item() for token in tokens)
+                        data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
+                df = pd.DataFrame(data) 
 
-    def plot(self, prompt: Prompt, timestamp: str, stream: str):
-        df = pd.read_csv(f"./"+self.folder_path+"/"+prompt.descriptive_label+stream+timestamp+".csv")
+                os.makedirs(self.folder_path, exist_ok=True)
+                soln_txt = ''.join([s.replace(' ', '_') for s in solns])
+                filepath = "./"+self.folder_path+"/"+prompt.descriptive_label+soln_txt+"_"+stream+"_"+timestamp
+
+                df.to_csv(filepath+".csv") # write csv
+                self.plot(prompt, soln_txt, timestamp, stream, filepath)
+
+    def plot(self, prompt: Prompt, soln_txt: str, timestamp: str, stream: str, filepath:str):
+        df = pd.read_csv(filepath+".csv")  # read csv
         df["layer"] = df["layer"].astype(int)
         df["pos"] = df["pos"].astype(int)
-        df["p("+prompt.soln+")"] = df["prob"].astype(float)
+        df["p("+soln_txt+")"] = df["prob"].astype(float)
 
         custom_labels = prompt.custom_labels
         breaks = prompt.breaks
@@ -214,7 +222,7 @@ class CausalTracer:
         plot = (
             ggplot(df, aes(x="layer", y="pos"))    
 
-            + geom_tile(aes(fill="p("+prompt.soln+")"))
+            + geom_tile(aes(fill="p("+soln_txt+")"))
             + scale_fill_cmap(colors[stream]) + xlab(titles[stream])
             + scale_y_reverse(
                 limits = (-0.5, 6.5), 
@@ -223,7 +231,7 @@ class CausalTracer:
             + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
         )
         ggsave(
-            plot, filename=f"./"+self.folder_path+"/"+prompt.descriptive_label+stream+timestamp+".pdf", dpi=200 # suze edit
+            plot, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
         )
         print(plot)
 
@@ -286,14 +294,26 @@ def main():
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
 
     # we will need to manually add the prompts like this... for now
-    tracer.add_prompt(("In 1980 there", 3, 2, [[[0, 1]]], " was", "1980_was", ["In*", "1980*", "there"], [0, 1, 2]))
+    # prompt: str
+    # prompt_len: int
+    # dim_corrupted_tokens: int
+    # corrupted_tokens: list[list]
+    # soln: str
+    # list_of_soln: list[str]
+    # descriptive_label: str
+    # custom_labels: list[str]
+    # breaks: list[int]
+
+    tracer.add_prompt(("In 1980 there", 3, 2, [[[0, 1]]], 
+                       " was", [[" was", " were", " had", " have", "wasn"], [" will", " would"], [" is", " are"]], 
+                       "1980_list", ["In*", "1980*", "there"], [0, 1, 2]))
 
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
         print("prompt is: " + p.prompt)
-        # tracer.factual_recall(prompt=p)
-        base = tracer.corrupted_run(prompt=p)
-        tracer.restore_run(prompt=p, base=base, timestamp=timestamp)
+        tracer.factual_recall(prompt=p)
+        # base = tracer.corrupted_run(prompt=p)
+        # tracer.restore_run(prompt=p, base=base, timestamp=timestamp)
 
 
 if __name__ == "__main__":
