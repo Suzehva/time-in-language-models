@@ -36,8 +36,40 @@ from tqdm import tqdm
 #DIM_CORRUPTED_TOKENS = 4 # TODO: figure out how to make this work
 
 
+from dataclasses import dataclass
+
+@dataclass
+class Prompt:
+    prompt: str
+    prompt_len: int
+    dim_corrupted_tokens: int
+    corrupted_tokens: list[list]
+    soln: str
+    descriptive_label: str
+    custom_labels: list[str]
+    breaks: list[int]
+
+
+# Plotting params #################################################
+
+mpl.rcParams['figure.figsize'] = (6, 4)  # Set default figure size
+mpl.rcParams['svg.fonttype'] = 'none'  # Keep text as text in SVGs
+
+titles={
+    "block_output": "single restored layer in OLMo 1B",
+    "mlp_activation": "center of interval of 10 patched mlp layer",
+    "attention_output": "center of interval of 10 patched attn layer"
+}
+colors={
+    "block_output": "Purples",
+    "mlp_activation": "Greens",
+    "attention_output": "Reds"
+} 
+
+
+
 class CausalTracer:
-    def __init__(self, model_id, device=None):
+    def __init__(self, model_id, folder_path="pyvene_data_ct_olmo", device=None):
         self.model_id = model_id
         # Initialize the device (GPU or MPS [for apple silicon] or CPU)
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu" 
@@ -50,15 +82,21 @@ class CausalTracer:
         self.model.to(self.device)
 
         self.prompts = []
+        self.folder_path = folder_path
 
-    def add_prompt(self, prompts: list[tuple]):
+    def add_prompt(self, prompt_tuple: tuple):
         # add a prompt we want to test
         # format of a prompt tuple:
         # (prompt, prompt_len, dim_corrupted_tokens, corrupted_tokens, soln, custom_labels, breaks)
         # for example:
         # ("In 2050 there", 3, 2, [[[0, 1]]], " will", ["In*", "2050*", "there"], [0, 1, 2])
-        print('adding prompts')
-        self.prompts += prompts
+
+        print("adding prompts\n")
+        prompt_obj = Prompt(*prompt_tuple)  # Unpack tuple and pass as args to Prompt
+        self.prompts.append(prompt_obj)
+
+    def get_prompts(self):
+        return self.prompts
 
     def num_tokens_in_vocab(self, prompt: list[str]):
         """
@@ -78,21 +116,26 @@ class CausalTracer:
     def list_from_prompt(self, prompt: str):
         return prompt.split(" ")
 
-    def factual_recall(self, prompt:str):
+    def factual_recall(self, prompt: Prompt):
+
         print("FACTUAL RECALL:")
+        print(prompt.prompt)
+
         inputs = [
-            self.tokenizer(prompt, return_tensors="pt").to(self.device),
+            self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device),
         ]
         res = self.model.model(**inputs[0])  # use self.model.model to get the BASE output instead of the CAUSAL output
-        print(prompt)
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
-    def corrupted_run(self, prompt: str, corrupted_tokens, dim_corrupted_tokens:int):
-        DEVICE = self.device # TODO: make this less horrible
+    def corrupted_run(self, prompt: Prompt):
 
         print("CORRUPTED RUN: ")
-        base = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        print(prompt.prompt)
+
+        base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
+        NoiseIntervention.dim_corrupted_tokens = prompt.dim_corrupted_tokens
+        NoiseIntervention.DEVICE = self.device
         config = IntervenableConfig(
             model_type=type(self.model_id),
             representations=[
@@ -105,68 +148,73 @@ class CausalTracer:
         )
         intervenable = IntervenableModel(config, self.model)
         _, counterfactual_outputs = intervenable(
-            base, unit_locations={"base": (corrupted_tokens)}  # defines which positions get corrupted
+            base, unit_locations={"base": (prompt.corrupted_tokens)}  # defines which positions get corrupted
         )
         # TODO: counterfactual_outputs.hidden_states[-1] is sketchy, fix it!
         counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # aditi addition
-        distrib = embed_to_distrib(self.model_id, counterfactual_outputs.last_hidden_state, logits=False)
+        distrib = embed_to_distrib(self.model, counterfactual_outputs.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10)
         return base
 
-    def restore_run(self, base, timestamp: str, ):
+    def restore_run(self, prompt: Prompt, base, timestamp: str):
         # @param base : use the base from the related corrupted_run
 
-        # should finish within 1 min with a standard 12G GPU
-        token = self.tokenizer.encode(SOLUTION)[0]  # 16335
+        print("RESTORED RUN:")
+        print(prompt.prompt)
+
+        token = self.tokenizer.encode(prompt.soln)[0]  
         print(token)
 
         for stream in ["block_output", "mlp_activation", "attention_output"]:
             data = []
-            for layer_i in tqdm(range(self.model_id.config.num_hidden_layers)):  # aditi modif num_hidden_layers
-                for pos_i in range(PROMPT_LEN):
+            for layer_i in tqdm(range(self.model.config.num_hidden_layers)):
+                for pos_i in range(prompt.prompt_len):
                     config = restore_corrupted_with_interval_config(
-                        layer_i, stream, 
+                        layer=layer_i,
+                        device=self.device, 
+                        dim_corrupted_tokens=prompt.dim_corrupted_tokens,
+                        stream=stream, 
                         window=1 if stream == "block_output" else 10, 
-                        num_layers=self.model_id.config.num_hidden_layers
+                        num_layers=self.model.config.num_hidden_layers,      
                     )
                     n_restores = len(config.representations) - 1
-                    intervenable = IntervenableModel(config, self.model_id)
+                    intervenable = IntervenableModel(config, self.model)
                     _, counterfactual_outputs = intervenable(
                         base,
                         [None] + [base]*n_restores,
                         {
                             "sources->base": (
                                 [None] + [[[pos_i]]]*n_restores,
-                                CORRUPTED_TOKENS + [[[pos_i]]]*n_restores,
+                                prompt.corrupted_tokens + [[[pos_i]]]*n_restores,
                             )
                         },
                     )
 
                     counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
                     distrib = embed_to_distrib(
-                        self.model_id, counterfactual_outputs.last_hidden_state, logits=False
+                        self.model, counterfactual_outputs.last_hidden_state, logits=False
                     )
                     prob = distrib[0][-1][token].detach().cpu().item()
                     data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
             df = pd.DataFrame(data) 
 
-            os.makedirs(folder_path, exist_ok=True)
-            df.to_csv(f"./"+folder_path+"/"+PROMPT+stream+timestamp+".csv")
-            self.plot(self, timestamp, stream)
+            os.makedirs(self.folder_path, exist_ok=True)
+            df.to_csv(f"./"+self.folder_path+"/"+prompt.descriptive_label+stream+timestamp+".csv")
+            self.plot(prompt, timestamp, stream)
 
-    def plot(self, timestamp: str, stream: str):
-        df = pd.read_csv(f"./"+folder_path+"/"+PROMPT+stream+timestamp+".csv")
+    def plot(self, prompt: Prompt, timestamp: str, stream: str):
+        df = pd.read_csv(f"./"+self.folder_path+"/"+prompt.descriptive_label+stream+timestamp+".csv")
         df["layer"] = df["layer"].astype(int)
         df["pos"] = df["pos"].astype(int)
-        df["p("+SOLUTION+")"] = df["prob"].astype(float)
+        df["p("+prompt.soln+")"] = df["prob"].astype(float)
 
-        custom_labels = CUSTOM_LABELS
-        breaks = BREAKS
+        custom_labels = prompt.custom_labels
+        breaks = prompt.breaks
 
         plot = (
             ggplot(df, aes(x="layer", y="pos"))    
 
-            + geom_tile(aes(fill="p("+SOLUTION+")"))
+            + geom_tile(aes(fill="p("+prompt.soln+")"))
             + scale_fill_cmap(colors[stream]) + xlab(titles[stream])
             + scale_y_reverse(
                 limits = (-0.5, 6.5), 
@@ -174,17 +222,21 @@ class CausalTracer:
             + theme(figure_size=(5, 4)) + ylab("") 
             + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
         )
-
         ggsave(
-            plot, filename=f"./"+folder_path+"/"+PROMPT+stream+timestamp+".pdf", dpi=200 # suze edit
+            plot, filename=f"./"+self.folder_path+"/"+prompt.descriptive_label+stream+timestamp+".pdf", dpi=200 # suze edit
         )
         print(plot)
 
 
 def restore_corrupted_with_interval_config(
-    layer, stream="mlp_activation", window=10, num_layers=48):
+    layer, device, dim_corrupted_tokens, stream="mlp_activation", window=10, num_layers=48):
+
     start = max(0, layer - window // 2)
     end = min(num_layers, layer - (-window // 2))
+
+    NoiseIntervention.dim_corrupted_tokens = dim_corrupted_tokens
+    NoiseIntervention.DEVICE = device
+
     config = IntervenableConfig(
         representations=[
             RepresentationConfig(
@@ -204,14 +256,22 @@ def restore_corrupted_with_interval_config(
 
 # TODO: How do i pass it dim_corrupted_tokens and DEVICE ?
 class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
+
+    dim_corrupted_tokens = None
+    DEVICE = None
+
     def __init__(self, embed_dim, **kwargs):
         super().__init__()
         self.interchange_dim = embed_dim
         rs = np.random.RandomState(1)
         prng = lambda *shape: rs.randn(*shape)
+
+        if NoiseIntervention.dim_corrupted_tokens is None or NoiseIntervention.DEVICE is None:
+            print("dim_corrupted_tokens and DEVICE must be set before instantiating NoiseIntervention.")
+
         self.noise = torch.from_numpy(
-            prng(1, dim_corrupted_tokens, embed_dim)
-            ).to(DEVICE)
+            prng(1,NoiseIntervention.dim_corrupted_tokens, embed_dim)
+            ).to(NoiseIntervention.DEVICE)
         self.noise_level = 0.13462981581687927
 
     def forward(self, base, source=None, subspaces=None):
@@ -223,33 +283,24 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
 
 def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")
-    #tracer.factual_recall(prompt="The Space Needle is in downtown")
-    tracer.corrupted_run(prompt="The Space Needle is in downtown", corrupted_tokens=[[[0, 1, 2, 3]]], dim_corrupted_tokens=4)
+    tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
+
+    # we will need to manually add the prompts like this... for now
+    tracer.add_prompt(("In 1980 there", 3, 2, [[[0, 1]]], " was", "1980_was", ["In*", "1980*", "there"], [0, 1, 2]))
+
+    # loop over every prompt to run pyvene
+    for p in tracer.get_prompts():
+        print("prompt is: " + p.prompt)
+        # tracer.factual_recall(prompt=p)
+        base = tracer.corrupted_run(prompt=p)
+        tracer.restore_run(prompt=p, base=base, timestamp=timestamp)
+
 
 if __name__ == "__main__":
     main()
 
 
 #-------------------------------
-
-mpl.rcParams['figure.figsize'] = (6, 4)  # Set default figure size
-mpl.rcParams['svg.fonttype'] = 'none'  # Keep text as text in SVGs
-
-folder_path = "pyvene_data_olmo_time"
-
-titles={
-    "block_output": "single restored layer in OLMo 1B",
-    "mlp_activation": "center of interval of 10 patched mlp layer",
-    "attention_output": "center of interval of 10 patched attn layer"
-}
-
-colors={
-    "block_output": "Purples",
-    "mlp_activation": "Greens",
-    "attention_output": "Reds"
-} 
-
 
 
 # Seattle PROMPT CONSTS
