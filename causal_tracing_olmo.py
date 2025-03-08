@@ -33,8 +33,6 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
-#DIM_CORRUPTED_TOKENS = 4 # TODO: figure out how to make this work
-
 
 from dataclasses import dataclass
 
