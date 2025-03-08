@@ -155,12 +155,13 @@ class CausalTracer:
         top_vals(self.tokenizer, distrib[0][-1], n=10)
         return base
 
-    def restore_run(self, prompt: Prompt, base, timestamp: str):
+    def restore_run(self, prompt: Prompt, timestamp: str):
         # @param base : use the base from the related corrupted_run
 
         print("RESTORED RUN:")
         print(prompt.prompt)
 
+        base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
         for solns in prompt.list_of_soln:
             tokens = [self.tokenizer.encode(soln)[0] for soln in solns]
             print("\n\n\nsolns pre-encoded" + str(solns))
@@ -310,8 +311,8 @@ def main():
     for p in tracer.get_prompts():
         print("prompt is: " + p.prompt)
         tracer.factual_recall(prompt=p)
-        # base = tracer.corrupted_run(prompt=p)
-        # tracer.restore_run(prompt=p, base=base, timestamp=timestamp)
+        # tracer.corrupted_run(prompt=p)
+        # tracer.restore_run(prompt=p, timestamp=timestamp)
 
 
 if __name__ == "__main__":
