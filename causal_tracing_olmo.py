@@ -369,9 +369,9 @@ def main():
         if p.year > 2030:
             relative_prompt_focus=" will" # future
 
-        tracer.restore_run(prompt=p, timestamp=timestamp)  # regular run for each tense
+        # tracer.restore_run(prompt=p, timestamp=timestamp)  # regular run for each tense
 
-        tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=" was")  # with subtraction
+        tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus)  # with subtraction
 
 
 
