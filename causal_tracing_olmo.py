@@ -311,8 +311,8 @@ def main():
     for p in tracer.get_prompts():
         print("prompt is: " + p.prompt)
         tracer.factual_recall(prompt=p)
-        # tracer.corrupted_run(prompt=p)
-        # tracer.restore_run(prompt=p, timestamp=timestamp)
+        tracer.corrupted_run(prompt=p)
+        tracer.restore_run(prompt=p, timestamp=timestamp)
 
 
 if __name__ == "__main__":
