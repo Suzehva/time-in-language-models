@@ -17,18 +17,15 @@ from pyvene import (
     create_olmo
 )
 
+# TODO remove plotnine im not using
 from plotnine import (
     ggplot,
     geom_tile,
     aes,
-    facet_wrap,
     theme,
     element_text,
-    geom_bar,
-    geom_hline,
-    scale_y_log10,
-    xlab, ylab, ylim,
-    scale_y_discrete, scale_y_continuous, ggsave
+    xlab, ylab, 
+    ggsave
 )
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
@@ -88,14 +85,16 @@ class CausalTracer:
     def add_asterisks(self, prompt, n):
         return [word + "*" if i < n else word for i, word in enumerate(prompt)]
 
-    def add_prompt(self, prompt: str, dim_corrupted_tokens: int, list_of_soln: list[str], descriptive_label: str, ):
+    def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, ):
         # TODO might need to take care of choosing the corrupted tokens manually...
+        prompt_list = self.num_tokens_in_prompt(prompt.split(" "))
+        prompt_len = len(self.num_tokens_in_prompt(prompt.split(" ")))
 
-        token_list = self.num_tokens_in_prompt((prompt.split(" ")[0:dim_corrupted_tokens]))  # takes the first dct words we want to corrupt
-        prompt_len = len(token_list) 
-        
-        corrupted_tokens = [[[i for i in range(dim_corrupted_tokens)]]]
-        custom_labels = self.add_asterisks(token_list, dim_corrupted_tokens)
+        token_list = self.num_tokens_in_prompt((prompt.split(" ")[0:dim_corrupted_words]))  # takes the first dct words we want to corrupt
+        dim_corrupted_tokens = len(token_list) 
+
+        corrupted_tokens_indices = [[[i for i in range(dim_corrupted_tokens)]]]
+        custom_labels = self.add_asterisks(prompt_list, dim_corrupted_tokens)
         breaks = list(range(prompt_len))
 
         # add a prompt we want to test in the format of a prompt tuple:
@@ -103,7 +102,9 @@ class CausalTracer:
         # for example:
         # ("In 2050 there", 3, 2, [[[0, 1]]], [ [" was", " were"], [" will"]], ["In*", "2050*", "there"], [0, 1, 2])
         print("adding prompts\n")
-        prompt_obj = Prompt(prompt, prompt_len, dim_corrupted_tokens, corrupted_tokens, list_of_soln, descriptive_label, custom_labels, breaks) 
+        prompt_obj = Prompt(prompt, prompt_len, dim_corrupted_tokens, corrupted_tokens_indices, list_of_soln, descriptive_label, custom_labels, breaks) 
+                
+        print( "PROMPT OBJ" + str(prompt_obj))
         self.prompts.append(prompt_obj)
         
         # // TODO!! does olmo have a start of sentence token?
@@ -160,6 +161,7 @@ class CausalTracer:
             ],
             intervention_types=NoiseIntervention,
         )
+
         intervenable = IntervenableModel(config, self.model)
         _, counterfactual_outputs = intervenable(
             base, unit_locations={"base": (prompt.corrupted_tokens)}  # defines which positions get corrupted
@@ -179,8 +181,7 @@ class CausalTracer:
         base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
         for solns in prompt.list_of_soln:
             tokens = [self.tokenizer.encode(soln)[0] for soln in solns]
-            print("\n\n\nsolns pre-encoded" + str(solns))
-            print("\n\n\ntoken encoded" + str(tokens))
+            print("\ntense:  " + str(solns))
 
             for stream in ["block_output", "mlp_activation", "attention_output"]:
                 # don't plot anything besides block output if we dont want it
@@ -243,7 +244,7 @@ class CausalTracer:
             + geom_tile(aes(fill="p("+soln_txt+")"))
             + scale_fill_cmap(colors[stream]) + xlab(titles[stream])
             + scale_y_reverse(
-                limits = (-0.5, 6.5), 
+                limits = (-0.5, len(breaks)+.5),   # aditi edit! previously, hardcoded (-.5, 6.5)
                 breaks=breaks, labels=custom_labels) 
             + theme(figure_size=(5, 4)) + ylab("") 
             + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
@@ -252,7 +253,6 @@ class CausalTracer:
             plot, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
         )
         print(plot)
-
 
 def restore_corrupted_with_interval_config(
     layer, device, dim_corrupted_tokens, stream="mlp_activation", window=10, num_layers=48):
@@ -279,10 +279,7 @@ def restore_corrupted_with_interval_config(
     )
     return config
 
-
-# TODO: How do i pass it dim_corrupted_tokens and DEVICE ?
 class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationIntervention):
-
     dim_corrupted_tokens = None
     DEVICE = None
 
@@ -313,12 +310,28 @@ def main():
 
     # TODO: avg over multiple prompt templates... longer prompt template
 
+    # create all the prompts we wanna use
     # YEARS = [1980, 2000, 2020, 2050]
-    YEARS = [2050]
+    YEARS = [1980]
+    PROMPTS = [("On a beautiful day in [[YEAR]] there ", "beautiful")] 
+    # ["In [[YEAR]], they ", "As of [[YEAR]] it ", "On a beautiful day in [[YEAR]], there", "On a gloomy day in [[YEAR]], there"]
     for y in YEARS:
-        pr = "In "+str(y)+" there"
-        descr_label = str(y)+"_"
-        tracer.add_prompt(prompt=pr, dim_corrupted_tokens=2, list_of_soln=[[" was", " were"], [" will"], [" is", " are"]], descriptive_label=descr_label)
+        for (prompt_template, descr) in PROMPTS:
+            prompt_real = prompt_template[:prompt_template.find("[[")] + str(y) + prompt_template[prompt_template.find("]]")+2:]
+            len_words_prompt = len(prompt_real.split(" ")) - 1 # always have an extra space @ the end of the prompt
+            descr_label = str(y) + "_" + descr 
+            # dim_corrupted_words is observed to usually be len_words_prompt-1 because the year is usually the 2nd to last word
+            tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=len_words_prompt-1, list_of_soln=[[" was", " were"], [" will"], [" is", " are"]], descriptive_label=descr_label)
+
+    # suze's method of passing 
+    # prob_to_plot=[[(" was", 1), (" were", 1), (" will", -1), (" is", -1), (" are", -1)]]
+    # TODO: aditi incorporate this method 
+
+    # # YEARS = [1980, 2000, 2020, 2050]
+    # descr_label = str(y)+"_"
+    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, prob_to_plot=[[(" was", 1), (" were", 1), (" will", -1), (" is", -1), (" are", -1)]], descriptive_label="1980")
+    # #tracer.add_prompt(prompt="In 2020 there", dim_corrupted_words=2, prob_to_plot=[[(" was", -1), (" were", -1), (" will", -1), (" is", 1), (" are", 1)]], descriptive_label="2020")
+    # #tracer.add_prompt(prompt="In 2050 there", dim_corrupted_words=2, prob_to_plot=[[(" was", -1), (" were", -1), (" will", 1), (" is", -1), (" are", -1)]], descriptive_label="2050")
 
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
