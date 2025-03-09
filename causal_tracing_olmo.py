@@ -33,6 +33,9 @@ from plotnine import (
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from tqdm import tqdm
 
+# use this to control whether you compute and plot stuff besides the block output
+plot_only_block_outputs = True
+
 
 from dataclasses import dataclass
 
@@ -42,7 +45,6 @@ class Prompt:
     prompt_len: int
     dim_corrupted_tokens: int
     corrupted_tokens: list[list]
-    soln: str
     list_of_soln: list[list[str]]
     descriptive_label: str
     custom_labels: list[str]
@@ -83,21 +85,34 @@ class CausalTracer:
         self.prompts = []
         self.folder_path = folder_path
 
-    def add_prompt(self, prompt_tuple: tuple):
-        # add a prompt we want to test
-        # format of a prompt tuple:
-        # (prompt, prompt_len, dim_corrupted_tokens, corrupted_tokens, soln, custom_labels, breaks)
-        # for example:
-        # ("In 2050 there", 3, 2, [[[0, 1]]], " will", ["In*", "2050*", "there"], [0, 1, 2])
+    def add_asterisks(self, prompt, n):
+        return [word + "*" if i < n else word for i, word in enumerate(prompt)]
 
+    def add_prompt(self, prompt: str, dim_corrupted_tokens: int, list_of_soln: list[str], descriptive_label: str, ):
+        # TODO might need to take care of choosing the corrupted tokens manually...
+
+        token_list = self.num_tokens_in_prompt((prompt.split(" ")[0:dim_corrupted_tokens]))  # takes the first dct words we want to corrupt
+        prompt_len = len(token_list) 
+        
+        corrupted_tokens = [[[i for i in range(dim_corrupted_tokens)]]]
+        custom_labels = self.add_asterisks(token_list, dim_corrupted_tokens)
+        breaks = list(range(prompt_len))
+
+        # add a prompt we want to test in the format of a prompt tuple:
+        # (prompt, prompt_len, dim_corrupted_tokens, corrupted_tokens, list_of_soln, custom_labels, breaks)
+        # for example:
+        # ("In 2050 there", 3, 2, [[[0, 1]]], [ [" was", " were"], [" will"]], ["In*", "2050*", "there"], [0, 1, 2])
         print("adding prompts\n")
-        prompt_obj = Prompt(*prompt_tuple)  # Unpack tuple and pass as args to Prompt
+        prompt_obj = Prompt(prompt, prompt_len, dim_corrupted_tokens, corrupted_tokens, list_of_soln, descriptive_label, custom_labels, breaks) 
         self.prompts.append(prompt_obj)
+        
+        # // TODO!! does olmo have a start of sentence token?
+
 
     def get_prompts(self):
         return self.prompts
 
-    def num_tokens_in_vocab(self, prompt: list[str]):
+    def num_tokens_in_prompt(self, prompt: list[str]):
         """
         Returns a list of strings based on how the model tokenizes the prompt
         Note: there could be multiple token id's for a word
@@ -168,6 +183,10 @@ class CausalTracer:
             print("\n\n\ntoken encoded" + str(tokens))
 
             for stream in ["block_output", "mlp_activation", "attention_output"]:
+                # don't plot anything besides block output if we dont want it
+                if plot_only_block_outputs and stream != "block_output":  
+                    continue
+                
                 data = []
                 for layer_i in tqdm(range(self.model.config.num_hidden_layers)):
                     for pos_i in range(prompt.prompt_len):
@@ -247,7 +266,7 @@ def restore_corrupted_with_interval_config(
     config = IntervenableConfig(
         representations=[
             RepresentationConfig(
-                0,       # layer
+                0,              # layer
                 "block_input",  # intervention type
             ),
         ] + [
@@ -292,27 +311,21 @@ def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
 
-    # we will need to manually add the prompts like this... for now
-    # prompt: str
-    # prompt_len: int
-    # dim_corrupted_tokens: int
-    # corrupted_tokens: list[list]
-    # soln: str
-    # list_of_soln: list[str]
-    # descriptive_label: str
-    # custom_labels: list[str]
-    # breaks: list[int]
+    # TODO: avg over multiple prompt templates... longer prompt template
 
-    tracer.add_prompt(("In 1980 there", 3, 2, [[[0, 1]]], 
-                       " was", [[" was", " were", " had", " have", "wasn"], [" will", " would"], [" is", " are"]], 
-                       "1980_list", ["In*", "1980*", "there"], [0, 1, 2]))
+    # YEARS = [1980, 2000, 2020, 2050]
+    YEARS = [2050]
+    for y in YEARS:
+        pr = "In "+str(y)+" there"
+        descr_label = str(y)+"_"
+        tracer.add_prompt(prompt=pr, dim_corrupted_tokens=2, list_of_soln=[[" was", " were"], [" will"], [" is", " are"]], descriptive_label=descr_label)
 
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
         print("prompt is: " + p.prompt)
-        tracer.factual_recall(prompt=p)
-        # tracer.corrupted_run(prompt=p)
-        # tracer.restore_run(prompt=p, timestamp=timestamp)
+        # tracer.factual_recall(prompt=p)                   # part 1 from pyvene causal tracing
+        # tracer.corrupted_run(prompt=p)                    # part 2 from pyvene causal tracing
+        tracer.restore_run(prompt=p, timestamp=timestamp) # part 3 from pyvene causal tracing
 
 
 if __name__ == "__main__":
