@@ -328,7 +328,7 @@ def main():
     # TODO: avg over multiple prompt templates... longer prompt template
 
     # create all the prompts we wanna use
-    YEARS = [1980, 2000, 2020, 2050]
+    YEARS = [ 2020, 2050] # 1980, 2000,
     # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
     # NOTE!! no commas in prompts. it breaks.
     # NOTE!! make sure to put a space at the end of the prompt!!
@@ -348,7 +348,6 @@ def main():
 
     # suze's method of passing 
     # prob_to_plot=[[(" was", 1), (" were", 1), (" will", -1), (" is", -1), (" are", -1)]]
-    # TODO: aditi incorporate this method 
 
     # # YEARS = [1980, 2000, 2020, 2050]
     # descr_label = str(y)+"_"
@@ -359,17 +358,18 @@ def main():
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
         print("prompt is: " + p.prompt)
-        # tracer.factual_recall(prompt=p)
-        # tracer.corrupted_run(prompt=p)
+        # tracer.factual_recall(prompt=p)  # part 1
+        # tracer.corrupted_run(prompt=p)   # part 2
+
+        # tracer.restore_run(prompt=p, timestamp=timestamp)  # part 3: regular run over all tenses
+
 
         # control which year we want to focus on for restore run. this is only relavant with relative runs
         relative_prompt_focus = " was" # past
-        if p.year > 2005:
+        if p.year > 2005: # 2005:
             relative_prompt_focus=" is" # present
-        if p.year > 2030:
+        if p.year > 2015: # 2030:
             relative_prompt_focus=" will" # future
-
-        # tracer.restore_run(prompt=p, timestamp=timestamp)  # regular run for each tense
 
         tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus)  # with subtraction
 
