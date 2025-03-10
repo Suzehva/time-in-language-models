@@ -99,7 +99,7 @@ class InterchangeIntervention:
             intervenable = IntervenableModel(config, self.model)
             for pos_i in range(len(base_tokenized.input_ids[0])): # looping over all the tokens in the base sentence
                 _, counterfactual_outputs = intervenable(
-                    base_tokenized, sources_tokenized, {"sources->base": pos_i}
+                    base_tokenized, sources_tokenized, {"sources->base": pos_i}  # what is sources->base   and what does this loop do?
                 )
                 distrib = embed_to_distrib(
                     self.model, counterfactual_outputs.last_hidden_state, logits=False
