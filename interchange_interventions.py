@@ -99,7 +99,7 @@ class InterchangeIntervention:
             intervenable = IntervenableModel(config, self.model)
             for pos_i in range(len(base_tokenized.input_ids[0])): # looping over all the tokens in the base sentence
                 _, counterfactual_outputs = intervenable(
-                    base_tokenized, sources_tokenized, {"sources->base": pos_i}  # what is sources->base   and what does this loop do?
+                    base_tokenized, sources_tokenized, {"sources->base": pos_i}  # what is sources->base   and what does this loop do? why can we pass in a list of sources??
                 )
                 counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # TODO: there must be a better way
                 distrib = embed_to_distrib(
@@ -186,6 +186,17 @@ def main():
     #    interchange_intervention.factual_recall(prompt=s_p)
     results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+
+    
+
+    # for time project;
+    base_prompt = "On a beautiful day in 1980 there"  # expect "was/were" with 15%
+    base_prompt = "On a beautiful day in 2020 there"  # expect "is/are" with 10%
+    interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf")
+    output_to_measure = [" was", " is"]  # TODO: extend this to include "were"/"are"
+    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+
 
 
 if __name__ == "__main__":
