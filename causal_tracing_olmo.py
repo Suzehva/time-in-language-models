@@ -72,10 +72,9 @@ class CausalTracer:
         self.model_id = model_id
         # Initialize the device (GPU or MPS [for apple silicon] or CPU)
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu" 
-        DEVICE = self.device # TODO: fix this so it's not necessary 
         print(f'Using device: {self.device}')
         if self.model_id == "allenai/OLMo-1B-hf":
-            self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) # create_gpt2(name="gpt2-xl")
+            self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) 
         else:
            os.error(f'only olmo is supported at this time') 
         self.model.to(self.device)
@@ -135,7 +134,6 @@ class CausalTracer:
         return prompt.split(" ")
 
     def factual_recall(self, prompt: Prompt):
-
         print("FACTUAL RECALL:")
         print(prompt.prompt)
 
