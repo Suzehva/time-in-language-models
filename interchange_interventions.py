@@ -1,6 +1,5 @@
 # based off of https://stanfordnlp.github.io/pyvene/tutorials/basic_tutorials/Basic_Intervention.html#interchange-intervention 
 import pandas as pd
-import pyvene
 from pyvene import embed_to_distrib, top_vals, format_token
 from pyvene import RepresentationConfig, IntervenableConfig, IntervenableModel
 from pyvene import (
@@ -31,7 +30,8 @@ from plotnine import (
     xlab, ylab, ylim,
     scale_y_discrete, scale_y_continuous, ggsave,
     labs,
-    scale_x_discrete
+    scale_x_discrete, 
+    scale_x_continuous
 )
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 # note: this is using GPT
@@ -173,7 +173,9 @@ class InterchangeIntervention:
         df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
 
         breaks, labels = list(range(len(base_token_pieces))), base_token_pieces
-        print(breaks, labels)
+        # Example:
+        # labels: ['The', 'capital', 'of', 'Spain', 'is']
+        # breaks: [0, 1, 2, 3, 4]
         
 
         plot_heat = (
@@ -181,19 +183,16 @@ class InterchangeIntervention:
             + geom_tile(aes(x="pos", y="layer", fill="prob", color="prob"))
             + facet_wrap("~token")
             + theme(axis_text_x=element_text(rotation=90))
-            + scale_x_discrete(
+            + scale_x_continuous(
                 breaks=breaks,
                 labels=labels
             )
             + labs(
-                title="Custom Heatmap Title", # TODO
-                x="Custom X Label",
+                title=f"Base: {base}, Source: {sources}", # TODO
                 y=f"Restored layer in {self.model_id}",
                 fill="Probability Scale",
                 color="Probability Scale"
             )
-            # labels: ['On*', 'a*', 'gl*', 'o*', 'omy*', 'day*', 'in*', '2020*', 'there']
-            # breaks: [0, 1, 2, 3, 4, 5, 6, 7, 8]
         )
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         base_txt = base.replace(' ', '_')
@@ -208,12 +207,29 @@ class InterchangeIntervention:
         if layer_to_filter > self.model.config.num_hidden_layers:
             print(f"cannot make bar plot for {layer_to_filter} because the model ({self.model_id}) only has {self.model.config.num_hidden_layers} layers")
         filtered = df[df["pos"] == layer_to_filter]
+
+        base_token_pieces = []
+        
+        for word in base.split(" "): # TODO: there must be a way to do this without for loop
+            token_ids = self.tokenizer(word, add_special_tokens=False)["input_ids"] 
+            token_pieces = self.tokenizer.convert_ids_to_tokens(token_ids) 
+            base_token_pieces += token_pieces
+
+
+
         plot_bar = (
             ggplot(filtered)
             + geom_bar(aes(x="layer", y="prob", fill="token"), stat="identity")
             + theme(axis_text_x=element_text(rotation=90), legend_position="none")
-            + scale_y_log10()
+            #+ scale_y_log10()
             + facet_wrap("~token", ncol=1)
+            + labs(
+                title=f"Base: {base}, Source: {sources}",
+                y=f"Probability Scale",
+                x=f"Restored layer ('{base_token_pieces[layer_to_filter]}') in {self.model_id}",
+                fill="Probability Scale",
+                color="Probability Scale"
+            )
         )
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         base_txt = base.replace(' ', '_')
@@ -229,13 +245,13 @@ def main():
     base_prompt = "The capital of Spain is" # sentence where part of residual stream will be replaced
     source_prompts = ["The capital of Italy is"] # sentence from which we take the replacement
     interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
-    output_to_measure = [" Madrid", " Rome"]
+    output_to_measure = [" Rome", " Madrid"]
     #interchange_intervention.factual_recall(prompt=base_prompt)
     #for s_p in source_prompts:
     #    interchange_intervention.factual_recall(prompt=s_p)
     results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    #interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
+    interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
 
 
     # for time project;
