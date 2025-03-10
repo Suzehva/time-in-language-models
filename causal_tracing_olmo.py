@@ -72,7 +72,6 @@ class CausalTracer:
         self.model_id = model_id
         # Initialize the device (GPU or MPS [for apple silicon] or CPU)
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu" 
-        DEVICE = self.device # TODO: fix this so it's not necessary 
         print(f'Using device: {self.device}')
         if self.model_id == "allenai/OLMo-1B-hf":
             self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) # create_gpt2(name="gpt2-xl")
@@ -334,7 +333,8 @@ def main():
     # NOTE!! make sure to put a space at the end of the prompt!!
     PROMPTS = [("On a gloomy day in [[YEAR]] there ", 6, "gloomy"), ("On a rainy day in [[YEAR]] there ", 6, "rainy"), 
                 ("On a beautiful day in [[YEAR]] there ", 6, "beautiful"), 
-               ("In [[YEAR]] there ", 2, "there"), ("As of [[YEAR]] it ", 3, "asof"), ("In [[YEAR]] they ", 2, "they")]
+               ("In [[YEAR]] there ", 2, "there"), ("As of [[YEAR]] it ", 3, "asof")]
+                # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
                
     TENSES = [[" was", " were"], [" will"], [" is", " are"]]
     for y in YEARS:
@@ -346,33 +346,23 @@ def main():
             tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words, 
                               list_of_soln=TENSES, descriptive_label=descr_label, year=y)
 
-    # suze's method of passing 
-    # prob_to_plot=[[(" was", 1), (" were", 1), (" will", -1), (" is", -1), (" are", -1)]]
-
-    # # YEARS = [1980, 2000, 2020, 2050]
-    # descr_label = str(y)+"_"
-    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, prob_to_plot=[[(" was", 1), (" were", 1), (" will", -1), (" is", -1), (" are", -1)]], descriptive_label="1980")
-    # #tracer.add_prompt(prompt="In 2020 there", dim_corrupted_words=2, prob_to_plot=[[(" was", -1), (" were", -1), (" will", -1), (" is", 1), (" are", 1)]], descriptive_label="2020")
-    # #tracer.add_prompt(prompt="In 2050 there", dim_corrupted_words=2, prob_to_plot=[[(" was", -1), (" were", -1), (" will", 1), (" is", -1), (" are", -1)]], descriptive_label="2050")
 
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
-        print("prompt is: " + p.prompt)
+
         # tracer.factual_recall(prompt=p)  # part 1
         # tracer.corrupted_run(prompt=p)   # part 2
 
         # tracer.restore_run(prompt=p, timestamp=timestamp)  # part 3: regular run over all tenses
 
-
         # control which year we want to focus on for restore run. this is only relavant with relative runs
         relative_prompt_focus = " was" # past
-        if p.year > 2005: # 2005:
+        if p.year > 2005:
             relative_prompt_focus=" is" # present
-        if p.year > 2015: # 2030:
+        if p.year > 2030:
             relative_prompt_focus=" will" # future
 
         tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus)  # with subtraction
-
 
 
 if __name__ == "__main__":
