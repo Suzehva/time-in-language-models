@@ -243,6 +243,7 @@ class CausalTracer:
 
                 df.to_csv(filepath+".csv") # write csv
                 self.plot(prompt, soln_txt, timestamp, stream, filepath)
+    
 
     def plot(self, prompt: Prompt, soln_txt: str, timestamp: str, stream: str, filepath:str):
         df = pd.read_csv(filepath+".csv")  # read csv
@@ -323,54 +324,42 @@ def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
 
-    # TODO: avg over multiple prompt templates... longer prompt template
-
     # create all the prompts we wanna use
     YEARS = [ 2020, 2050] # 1980, 2000,
     # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
-    # NOTE!! no commas in prompts. it breaks.
+    # NOTE!! no commas in prompts. it breaks sometimes.
     # NOTE!! make sure to put a space at the end of the prompt!!
     PROMPTS = [("On a gloomy day in [[YEAR]] there ", 6, "gloomy"), ("On a rainy day in [[YEAR]] there ", 6, "rainy"), 
                 ("On a beautiful day in [[YEAR]] there ", 6, "beautiful"), 
-               ("In [[YEAR]] there ", 2, "there"), ("As of [[YEAR]] it ", 3, "asof"), ("In [[YEAR]] they ", 2, "they")]
+               ("In [[YEAR]] there ", 2, "there"), ("As of [[YEAR]] it ", 3, "asof")]
+                # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
                
     TENSES = [[" was", " were"], [" will"], [" is", " are"]]
     for y in YEARS:
-        for (prompt_template, num_words, descr) in PROMPTS:
+        for (prompt_template, num_words_to_corrupt, descr) in PROMPTS:
             prompt_real = prompt_template[:prompt_template.find("[[")] + str(y) + prompt_template[prompt_template.find("]]")+2:]
-            len_words_prompt = len(prompt_real.split(" ")) - 1 # always have an extra space @ the end of the prompt
             descr_label = str(y) + "_" + descr 
             # dim_corrupted_words is observed to usually be len_words_prompt-1 because the year is usually the 2nd to last word
-            tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words, 
+            tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words_to_corrupt, 
                               list_of_soln=TENSES, descriptive_label=descr_label, year=y)
 
-    # suze's method of passing 
-    # prob_to_plot=[[(" was", 1), (" were", 1), (" will", -1), (" is", -1), (" are", -1)]]
-
-    # # YEARS = [1980, 2000, 2020, 2050]
-    # descr_label = str(y)+"_"
-    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, prob_to_plot=[[(" was", 1), (" were", 1), (" will", -1), (" is", -1), (" are", -1)]], descriptive_label="1980")
-    # #tracer.add_prompt(prompt="In 2020 there", dim_corrupted_words=2, prob_to_plot=[[(" was", -1), (" were", -1), (" will", -1), (" is", 1), (" are", 1)]], descriptive_label="2020")
-    # #tracer.add_prompt(prompt="In 2050 there", dim_corrupted_words=2, prob_to_plot=[[(" was", -1), (" were", -1), (" will", 1), (" is", -1), (" are", -1)]], descriptive_label="2050")
 
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
-        print("prompt is: " + p.prompt)
+
         # tracer.factual_recall(prompt=p)  # part 1
         # tracer.corrupted_run(prompt=p)   # part 2
 
         # tracer.restore_run(prompt=p, timestamp=timestamp)  # part 3: regular run over all tenses
 
-
         # control which year we want to focus on for restore run. this is only relavant with relative runs
         relative_prompt_focus = " was" # past
-        if p.year > 2005: # 2005:
+        if p.year > 2005:
             relative_prompt_focus=" is" # present
-        if p.year > 2015: # 2030:
+        if p.year > 2030:
             relative_prompt_focus=" will" # future
 
         tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus)  # with subtraction
-
 
 
 if __name__ == "__main__":
