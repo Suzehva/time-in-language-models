@@ -250,10 +250,10 @@ class CausalTracer:
                 filepath = "./"+self.folder_path+"/"+run_type+"_"+prompt.descriptive_label+"_"+soln_txt+"_"+stream+"_"+timestamp
 
                 df.to_csv(filepath+".csv") # write csv
-                self.plot(prompt, soln_txt, timestamp, stream, filepath)
+                self.plot(prompt, soln_txt, stream, filepath)
     
 
-    def plot(self, prompt: Prompt, soln_txt: str, timestamp: str, stream: str, filepath:str):
+    def plot(self, prompt: Prompt, soln_txt: str, stream: str, filepath:str):
         df = pd.read_csv(filepath+".csv")  # read csv
         df["layer"] = df["layer"].astype(int)
         df["pos"] = df["pos"].astype(int)
@@ -355,7 +355,7 @@ def main():
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
 
-        # tracer.factual_recall(prompt=p)  # part 1
+        #tracer.factual_recall(prompt=p)  # part 1
         # tracer.corrupted_run(prompt=p)   # part 2
 
         # tracer.restore_run(prompt=p, timestamp=timestamp)  # part 3: regular run over all tenses
