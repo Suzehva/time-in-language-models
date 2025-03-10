@@ -94,12 +94,14 @@ class InterchangeIntervention:
 
         intervention_data = []
 
-        for layer_i in tqdm(range(self.model.config.num_hidden_layers)): # looping over all hidden layers in model
+        for layer_i in tqdm(range(self.model.config.num_hidden_layers)): # looping over all hidden layers in model (every layer is an MLP?)
             config = self.simple_position_config("mlp_output", layer_i)
             intervenable = IntervenableModel(config, self.model)
             for pos_i in range(len(base_tokenized.input_ids[0])): # looping over all the tokens in the base sentence
-                _, counterfactual_outputs = intervenable(
-                    base_tokenized, sources_tokenized, {"sources->base": pos_i}  # what is sources->base   and what does this loop do? why can we pass in a list of sources??
+                _, counterfactual_outputs = intervenable( 
+                    # counterfactual_outputs stores lots of things, amongst which hidden states of the base model with the mlp_output 
+                    # at position i replaced with the mlp_output of source
+                    base_tokenized, sources_tokenized, {"sources->base": pos_i} why can we pass in a list of sources??
                 )
                 counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # TODO: there must be a better way
                 distrib = embed_to_distrib(
@@ -171,10 +173,26 @@ class InterchangeIntervention:
             plot_heat, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
         )
     
-    def bar_plot(self, df):
-        pass
-
-
+    def bar_plot(self, df, base: str, sources: list[str], output_to_measure: list[str], layer_to_filter: int):
+        if layer_to_filter > self.model.config.num_hidden_layers:
+            print(f"cannot make bar plot for {layer_to_filter} because the model ({self.model_id}) only has {self.model.config.num_hidden_layers} layers")
+        filtered = df[df["pos"] == layer_to_filter]
+        plot_bar = (
+            ggplot(filtered)
+            + geom_bar(aes(x="layer", y="prob", fill="token"), stat="identity")
+            + theme(axis_text_x=element_text(rotation=90), legend_position="none")
+            + scale_y_log10()
+            + facet_wrap("~token", ncol=1)
+        )
+        timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        base_txt = base.replace(' ', '_')
+        output_prob_text = '(' + ''.join([s.replace(' ', '_') for s in output_to_measure]) + ')'
+        filepath = "./"+self.folder_path+"/"+base_txt+output_prob_text+"_"+timestamp
+        print(f"saving interchange intervention bar plot to {filepath}.pdf")
+        ggsave(
+            plot_bar, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
+        )
+        
 
 def main():
     base_prompt = "The capital of Spain is" # sentence where part of residual stream will be replaced
@@ -186,6 +204,18 @@ def main():
     #    interchange_intervention.factual_recall(prompt=s_p)
     results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
+
+    
+
+    # # for time project;
+    # base_prompt = "On a beautiful day in 1980 there"  # expect "was/were" with 15%
+    # base_prompt = "On a beautiful day in 2020 there"  # expect "is/are" with 10%
+    # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf")
+    # output_to_measure = [" was", " is"]  # TODO: extend this to include "were"/"are"
+    # results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    # interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+
 
     
 
@@ -201,22 +231,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-# -----------
-
-"""
-filtered = df
-filtered = filtered[filtered["pos"] == 4]
-plot_bar = (
-    ggplot(filtered)
-    + geom_bar(aes(x="layer", y="prob", fill="token"), stat="identity")
-    + theme(axis_text_x=element_text(rotation=90), legend_position="none")
-    + scale_y_log10()
-    + facet_wrap("~token", ncol=1)
-)
-timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-filepath = "./"+folder_path+"/"+timestamp
-print(f"saving file to {filepath}.pdf")
-ggsave(
-    plot_bar, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
-"""
