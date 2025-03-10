@@ -217,7 +217,7 @@ class CausalTracer:
                                     prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
                                 )
                             }
-                        print("n\n\n\n\n\n\n\n\n\n\nADITI PRINT TEST : "+str(i_print))
+                        #print("n\n\n\n\n\n\n\n\n\n\nADITI PRINT TEST : "+str(i_print))
                         _, counterfactual_outputs = intervenable(
                             base,
                             [None] + [base]*n_restores,

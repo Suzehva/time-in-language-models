@@ -156,7 +156,13 @@ class InterchangeIntervention:
         return df
 
     def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
-        base_token_pieces = self.tokenizer.convert_tokens_to_ids(self.tokenizer(base, return_tensors="pt"))
+        base_token_pieces = []
+        
+        for word in base.split(" "): # TODO: there must be a way to do this without for loop
+            token_ids = self.tokenizer(word, add_special_tokens=False)["input_ids"] 
+            token_pieces = self.tokenizer.convert_ids_to_tokens(token_ids) 
+            base_token_pieces += token_pieces
+
 
         df["layer"] = df["layer"].astype("category")
         df["token"] = df["token"].astype("category")
@@ -165,6 +171,9 @@ class InterchangeIntervention:
             nodes.append(f"f{l}")
             nodes.append(f"a{l}")
         df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
+
+        breaks, labels = list(range(len(base_token_pieces))), base_token_pieces
+        print(breaks, labels)
         
 
         plot_heat = (
@@ -173,8 +182,8 @@ class InterchangeIntervention:
             + facet_wrap("~token")
             + theme(axis_text_x=element_text(rotation=90))
             + scale_x_discrete(
-                breaks=list(range(len(base_token_pieces))),
-                labels=base_token_pieces
+                breaks=breaks,
+                labels=labels
             )
             + labs(
                 title="Custom Heatmap Title", # TODO
@@ -183,6 +192,8 @@ class InterchangeIntervention:
                 fill="Probability Scale",
                 color="Probability Scale"
             )
+            # labels: ['On*', 'a*', 'gl*', 'o*', 'omy*', 'day*', 'in*', '2020*', 'there']
+            # breaks: [0, 1, 2, 3, 4, 5, 6, 7, 8]
         )
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         base_txt = base.replace(' ', '_')
