@@ -10,7 +10,8 @@ from pyvene import (
     IntervenableConfig,
     ConstantSourceIntervention,
     LocalistRepresentationIntervention,
-    create_olmo
+    create_olmo,
+    create_gpt2
 )
 from tqdm import tqdm
 import torch
@@ -47,15 +48,17 @@ from plotnine import (
 
 
 class InterchangeIntervention:
-    def __init__(self, model_id, folder_path="pyvene_data_interchange_intervention_olmo", device=None):
+    def __init__(self, model_id, folder_path: str, device=None):
         self.model_id = model_id
         # Initialize the device (GPU or MPS [for apple silicon] or CPU)
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu" 
         print(f'Using device: {self.device}')
         if self.model_id == "allenai/OLMo-1B-hf":
-            self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) 
+            self.config, self.tokenizer, self.model = create_olmo()
+        elif self.model_id == "gpt2":
+            self.config, self.tokenizer, self.model = create_gpt2()
         else:
-           os.error(f'only olmo is supported at this time') 
+           os.error(f'only olmo, gpt2 is supported at this time') 
         self.model.to(self.device)
 
         self.prompts = []
@@ -74,7 +77,7 @@ class InterchangeIntervention:
 
     def simple_position_config(self, component, layer):
         config = IntervenableConfig(
-            model_type=type(self.model_id),
+            model_type=type(self.model),
             representations=[
                 RepresentationConfig(
                     layer,              # layer
@@ -88,8 +91,8 @@ class InterchangeIntervention:
         return config
 
     def intervene(self, base: str, sources: list[str], output_to_measure: list[str]):
-        base_tokenized = self.tokenizer("The capital of Spain is", return_tensors="pt")
-        sources_tokenized = [self.tokenizer("The capital of Italy is", return_tensors="pt")]
+        base_tokenized = self.tokenizer(base, return_tensors="pt")
+        sources_tokenized = [self.tokenizer(sources, return_tensors="pt")]
         tokens = [self.tokenizer.encode(word) for word in output_to_measure]
 
         intervention_data = []
@@ -101,7 +104,7 @@ class InterchangeIntervention:
                 _, counterfactual_outputs = intervenable( 
                     # counterfactual_outputs stores lots of things, amongst which hidden states of the base model with the mlp_output 
                     # at position i replaced with the mlp_output of source
-                    base_tokenized, sources_tokenized, {"sources->base": pos_i} why can we pass in a list of sources??
+                    base_tokenized, sources_tokenized, {"sources->base": pos_i} #why can we pass in a list of sources??
                 )
                 counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # TODO: there must be a better way
                 distrib = embed_to_distrib(
@@ -167,7 +170,7 @@ class InterchangeIntervention:
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         base_txt = base.replace(' ', '_')
         output_prob_text = '(' + ''.join([s.replace(' ', '_') for s in output_to_measure]) + ')'
-        filepath = "./"+self.folder_path+"/"+base_txt+output_prob_text+"_"+timestamp
+        filepath = "./"+self.folder_path+"/heat_"+base_txt+output_prob_text+"_"+timestamp
         print(f"saving interchange intervention heatmap to {filepath}.pdf")
         ggsave(
             plot_heat, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
@@ -187,7 +190,7 @@ class InterchangeIntervention:
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         base_txt = base.replace(' ', '_')
         output_prob_text = '(' + ''.join([s.replace(' ', '_') for s in output_to_measure]) + ')'
-        filepath = "./"+self.folder_path+"/"+base_txt+output_prob_text+"_"+timestamp
+        filepath = "./"+self.folder_path+"/bar_"+base_txt+output_prob_text+"_"+timestamp
         print(f"saving interchange intervention bar plot to {filepath}.pdf")
         ggsave(
             plot_bar, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
@@ -197,7 +200,7 @@ class InterchangeIntervention:
 def main():
     base_prompt = "The capital of Spain is" # sentence where part of residual stream will be replaced
     source_prompts = ["The capital of Italy is"] # sentence from which we take the replacement
-    interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf")
+    interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
     output_to_measure = [" Madrid", " Rome"]
     #interchange_intervention.factual_recall(prompt=base_prompt)
     #for s_p in source_prompts:
@@ -208,12 +211,12 @@ def main():
 
 
     # for time project;
-    base_prompt = "On a beautiful day in 1980 there"  # expect "was/were" with 15%
-    base_prompt = "On a beautiful day in 2020 there"  # expect "is/are" with 10%
-    interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf")
-    output_to_measure = [" was", " is"]  # TODO: extend this to include "were"/"are"
-    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    # base_prompt = "On a beautiful day in 1980 there"  # expect "was/were" with 15%
+    # base_prompt = "On a beautiful day in 2020 there"  # expect "is/are" with 10%
+    # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf")
+    # output_to_measure = [" was", " is"]  # TODO: extend this to include "were"/"are"
+    # results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    # interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
 
 
 
