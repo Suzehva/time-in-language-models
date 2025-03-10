@@ -206,18 +206,6 @@ def main():
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
 
-    
-
-    # # for time project;
-    # base_prompt = "On a beautiful day in 1980 there"  # expect "was/were" with 15%
-    # base_prompt = "On a beautiful day in 2020 there"  # expect "is/are" with 10%
-    # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf")
-    # output_to_measure = [" was", " is"]  # TODO: extend this to include "were"/"are"
-    # results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    # interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-
-
-    
 
     # for time project;
     base_prompt = "On a beautiful day in 1980 there"  # expect "was/were" with 15%
