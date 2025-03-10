@@ -244,6 +244,7 @@ class CausalTracer:
 
                 df.to_csv(filepath+".csv") # write csv
                 self.plot(prompt, soln_txt, timestamp, stream, filepath)
+    
 
     def plot(self, prompt: Prompt, soln_txt: str, timestamp: str, stream: str, filepath:str):
         df = pd.read_csv(filepath+".csv")  # read csv
@@ -324,12 +325,10 @@ def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
 
-    # TODO: avg over multiple prompt templates... longer prompt template
-
     # create all the prompts we wanna use
     YEARS = [ 2020, 2050] # 1980, 2000,
     # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
-    # NOTE!! no commas in prompts. it breaks.
+    # NOTE!! no commas in prompts. it breaks sometimes.
     # NOTE!! make sure to put a space at the end of the prompt!!
     PROMPTS = [("On a gloomy day in [[YEAR]] there ", 6, "gloomy"), ("On a rainy day in [[YEAR]] there ", 6, "rainy"), 
                 ("On a beautiful day in [[YEAR]] there ", 6, "beautiful"), 
@@ -338,12 +337,11 @@ def main():
                
     TENSES = [[" was", " were"], [" will"], [" is", " are"]]
     for y in YEARS:
-        for (prompt_template, num_words, descr) in PROMPTS:
+        for (prompt_template, num_words_to_corrupt, descr) in PROMPTS:
             prompt_real = prompt_template[:prompt_template.find("[[")] + str(y) + prompt_template[prompt_template.find("]]")+2:]
-            len_words_prompt = len(prompt_real.split(" ")) - 1 # always have an extra space @ the end of the prompt
             descr_label = str(y) + "_" + descr 
             # dim_corrupted_words is observed to usually be len_words_prompt-1 because the year is usually the 2nd to last word
-            tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words, 
+            tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words_to_corrupt, 
                               list_of_soln=TENSES, descriptive_label=descr_label, year=y)
 
 
