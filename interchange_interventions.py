@@ -29,7 +29,8 @@ from plotnine import (
     geom_hline,
     scale_y_log10,
     xlab, ylab, ylim,
-    scale_y_discrete, scale_y_continuous, ggsave
+    scale_y_discrete, scale_y_continuous, ggsave,
+    labs
 )
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 # note: this is using GPT
@@ -50,11 +51,12 @@ from plotnine import (
 class InterchangeIntervention:
     def __init__(self, model_id, folder_path: str, device=None):
         self.model_id = model_id
+        print(f"Running with model {self.model_id}")
         # Initialize the device (GPU or MPS [for apple silicon] or CPU)
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu" 
         print(f'Using device: {self.device}')
         if self.model_id == "allenai/OLMo-1B-hf":
-            self.config, self.tokenizer, self.model = create_olmo()
+            self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) 
         elif self.model_id == "gpt2":
             self.config, self.tokenizer, self.model = create_gpt2()
         else:
@@ -153,6 +155,9 @@ class InterchangeIntervention:
         return df
 
     def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
+        base_token_pieces = self.tokenizer.convert_ids_to_tokens(self.tokenizer(base, return_tensors="pt"))
+        #sources_token_pieces = self.tokenizer.convert_ids_to_tokens(self.tokenizer(sources, return_tensors="pt"))
+
         df["layer"] = df["layer"].astype("category")
         df["token"] = df["token"].astype("category")
         nodes = []
@@ -166,6 +171,13 @@ class InterchangeIntervention:
             + geom_tile(aes(x="pos", y="layer", fill="prob", color="prob"))
             + facet_wrap("~token")
             + theme(axis_text_x=element_text(rotation=90))
+            + labs(
+                title="Custom Heatmap Title",
+                x="Custom X Label",
+                y="Custom Y Label",
+                fill="Probability Scale",
+                color="Probability Scale"
+            )
         )
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         base_txt = base.replace(' ', '_')
@@ -207,7 +219,7 @@ def main():
     #    interchange_intervention.factual_recall(prompt=s_p)
     results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
+    #interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
 
 
     # for time project;
@@ -217,8 +229,6 @@ def main():
     # output_to_measure = [" was", " is"]  # TODO: extend this to include "were"/"are"
     # results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     # interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-
-
 
 if __name__ == "__main__":
     main()
