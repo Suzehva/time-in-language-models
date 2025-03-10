@@ -84,6 +84,9 @@ class CausalTracer:
 
     def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, year: int):
         # TODO might need to take care of choosing the corrupted tokens manually...
+        if (prompt[-1] != " "):
+            prompt+=" " # in case the user did not add a space at the end of the prompt. not adding a space messes up the prompt list calculation below.
+        
         prompt_list = self.num_tokens_in_prompt(prompt.split(" "))
         prompt_len = len(prompt_list)
 
@@ -217,7 +220,7 @@ class CausalTracer:
                                     prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
                                 )
                             }
-                        #print("n\n\n\n\n\n\n\n\n\n\nADITI PRINT TEST : "+str(i_print))
+                        print("\nADITI PRINT TEST : "+str(i_print))
                         _, counterfactual_outputs = intervenable(
                             base,
                             [None] + [base]*n_restores,
@@ -241,6 +244,11 @@ class CausalTracer:
                             subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
                             prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
                             prob = prob - prob_subtr
+
+                        if (pos_i == prompt.prompt_len-1):
+                            print("\n\nat last token in prompt")
+                            print("probability=" +str(prob)+"\n\n")
+
 
                         data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
                 df = pd.DataFrame(data) 
@@ -335,81 +343,67 @@ def main():
     # create all the prompts we wanna use
     YEARS = [ 2020, 2050] # 1980, 2000,
     # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
-    # NOTE!! no commas in prompts. it breaks sometimes.
-    # NOTE!! make sure to put a space at the end of the prompt!!
-    PROMPTS = [("On a gloomy day in [[YEAR]] there ", 6, "gloomy"), ("On a rainy day in [[YEAR]] there ", 6, "rainy"), 
-                ("On a beautiful day in [[YEAR]] there ", 6, "beautiful"), 
-               ("In [[YEAR]] there ", 2, "there"), ("As of [[YEAR]] it ", 3, "asof")]
+    # NOTE!! no commas allowed in prompts. it breaks sometimes.
+    PROMPTS = [("On a gloomy day in [[YEAR]] there", 6, "gloomy"), ("On a rainy day in [[YEAR]] there", 6, "rainy"), 
+                ("On a beautiful day in [[YEAR]] there", 6, "beautiful"), 
+               ("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof")]
                 # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
-               
     TENSES = [[" was", " were"], [" will"], [" is", " are"]]
-    for y in YEARS:
-        for (prompt_template, num_words_to_corrupt, descr) in PROMPTS:
-            prompt_real = prompt_template[:prompt_template.find("[[")] + str(y) + prompt_template[prompt_template.find("]]")+2:]
-            descr_label = str(y) + "_" + descr 
-            # dim_corrupted_words is observed to usually be len_words_prompt-1 because the year is usually the 2nd to last word
-            tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words_to_corrupt, 
-                              list_of_soln=TENSES, descriptive_label=descr_label, year=y)
+
+
+    if (1):
+        # aditi's mini-experiment to see whether the year affects the output, or if there's something else at play here...
+        # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
+        #                           list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)         # this is our usual "there" test
+        # tracer.add_prompt(prompt="Before 1980 there", dim_corrupted_words=2, 
+        #                     list_of_soln=TENSES, descriptive_label="ctrl_before_there", year=1980)          # this tests if its relative to 1980 -- what happens now?
+        tracer.add_prompt(prompt="After 1980 there", dim_corrupted_words=2, 
+                            list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)          # parallels before
+        # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
+        #                           list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)     # slighty longer prompt for 1980
+        # tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
+        #                         list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
+        # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
+        #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+
+    if(0):
+        # used to generate lots of graphs
+        for y in YEARS:
+            for (prompt_template, num_words_to_corrupt, descr) in PROMPTS:
+                prompt_real = prompt_template[:prompt_template.find("[[")] + str(y) + prompt_template[prompt_template.find("]]")+2:]
+                descr_label = str(y) + "_" + descr 
+                # dim_corrupted_words is observed to usually be len_words_prompt-1 because the year is usually the 2nd to last word
+                tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words_to_corrupt, 
+                                list_of_soln=TENSES, descriptive_label=descr_label, year=y)
+
+
 
 
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
 
-        #tracer.factual_recall(prompt=p)  # part 1
-        # tracer.corrupted_run(prompt=p)   # part 2
+        tracer.factual_recall(prompt=p)  # part 1
+        tracer.corrupted_run(prompt=p)   # part 2
 
-        # tracer.restore_run(prompt=p, timestamp=timestamp)  # part 3: regular run over all tenses
+        relative = False   # looks better than commenting out a bunch of code
 
-        # control which year we want to focus on for restore run. this is only relavant with relative runs
-        relative_prompt_focus = " was" # past
-        if p.year > 2005:
-            relative_prompt_focus=" is" # present
-        if p.year > 2030:
-            relative_prompt_focus=" will" # future
+        if (not relative):
+            tracer.restore_run(prompt=p, timestamp=timestamp)  # part 3: regular run over all tenses
 
-        tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus)  # with subtraction
+        if (relative):
+            # relative runs:
+            # control which year we want to focus on for restore run. 
+            relative_prompt_focus = " was" # past
+            if p.year > 2005:
+                relative_prompt_focus=" is" # present
+            if p.year > 2030:
+                relative_prompt_focus=" will" # future
+
+            tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus)  # with subtraction
+
+
 
 
 if __name__ == "__main__":
     main()
 
-
-#-------------------------------
-
-
-# Seattle PROMPT CONSTS
-# PROMPT = "The Space Needle is in downtown"
-# PROMPT_LEN = 7 # needle splits into need + le
-# DIM_CORRUPTED_TOKENS = 4
-# CORRUPTED_TOKENS = [[[0, 1, 2, 3]]]
-# SOLUTION = " Seattle"
-# CUSTOM_LABELS = ["The*", "Space*", "Need*", "le*", "is", "in", "downtown"]
-# BREAKS = [0, 1, 2, 3, 4, 5, 6]
-
-# 1980 PROMPT CONSTS
-# PROMPT = "In 1980 there"
-# PROMPT_LEN = 3
-# DIM_CORRUPTED_TOKENS = 2
-# CORRUPTED_TOKENS = [[[0, 1]]]
-# SOLUTION = " was"
-# CUSTOM_LABELS = ["In*", "1980*", "there"]
-# BREAKS = [0, 1, 2]
-
-
-# 2020 PROMPT CONSTS
-# PROMPT = "In 2020 there"
-# PROMPT_LEN = 3
-# DIM_CORRUPTED_TOKENS = 2
-# CORRUPTED_TOKENS = [[[0, 1]]]
-# SOLUTION = " is"
-# CUSTOM_LABELS = ["In*", "2020*", "there"]
-# BREAKS = [0, 1, 2]
-
-# 2050 PROMPT CONSTS
-# PROMPT = "In 2050 there"
-# PROMPT_LEN = 3
-# DIM_CORRUPTED_TOKENS = 2
-# CORRUPTED_TOKENS = [[[0, 1]]]
-# SOLUTION = " will"
-# CUSTOM_LABELS = ["In*", "2050*", "there"]
-# BREAKS = [0, 1, 2]
