@@ -210,6 +210,14 @@ class CausalTracer:
                         )
                         n_restores = len(config.representations) - 1
                         intervenable = IntervenableModel(config, self.model)
+
+                        i_print = {
+                                "sources->base": (
+                                    [None] + [[[pos_i]]]*n_restores,
+                                    prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
+                                )
+                            }
+                        print("n\n\n\n\n\n\n\n\n\n\nADITI PRINT TEST : "+str(i_print))
                         _, counterfactual_outputs = intervenable(
                             base,
                             [None] + [base]*n_restores,
