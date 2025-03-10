@@ -245,9 +245,7 @@ class CausalTracer:
                             prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
                             prob = prob - prob_subtr
 
-                        if (pos_i == prompt.prompt_len-1):
-                            print("\n\nat last token in prompt")
-                            print("probability=" +str(prob)+"\n\n")
+                        # prob = pos_i/prompt.prompt_len  # debugging. QUESTION: do we even draw on all of them? ANS: YES
 
 
                         data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
@@ -357,12 +355,12 @@ def main():
         #                           list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)         # this is our usual "there" test
         # tracer.add_prompt(prompt="Before 1980 there", dim_corrupted_words=2, 
         #                     list_of_soln=TENSES, descriptive_label="ctrl_before_there", year=1980)          # this tests if its relative to 1980 -- what happens now?
-        tracer.add_prompt(prompt="After 1980 there", dim_corrupted_words=2, 
-                            list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)          # parallels before
+        # tracer.add_prompt(prompt="After 1980 there", dim_corrupted_words=2, 
+        #                     list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)          # parallels before
         # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
         #                           list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)     # slighty longer prompt for 1980
-        # tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
-        #                         list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
+        tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
+                                list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
         # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
         #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
 
