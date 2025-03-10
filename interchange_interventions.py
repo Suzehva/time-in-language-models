@@ -30,7 +30,8 @@ from plotnine import (
     scale_y_log10,
     xlab, ylab, ylim,
     scale_y_discrete, scale_y_continuous, ggsave,
-    labs
+    labs,
+    scale_x_discrete
 )
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 # note: this is using GPT
@@ -155,8 +156,7 @@ class InterchangeIntervention:
         return df
 
     def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
-        base_token_pieces = self.tokenizer.convert_ids_to_tokens(self.tokenizer(base, return_tensors="pt"))
-        #sources_token_pieces = self.tokenizer.convert_ids_to_tokens(self.tokenizer(sources, return_tensors="pt"))
+        base_token_pieces = self.tokenizer.convert_tokens_to_ids(self.tokenizer(base, return_tensors="pt"))
 
         df["layer"] = df["layer"].astype("category")
         df["token"] = df["token"].astype("category")
@@ -165,16 +165,21 @@ class InterchangeIntervention:
             nodes.append(f"f{l}")
             nodes.append(f"a{l}")
         df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
+        
 
         plot_heat = (
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="prob", color="prob"))
             + facet_wrap("~token")
             + theme(axis_text_x=element_text(rotation=90))
+            + scale_x_discrete(
+                breaks=list(range(len(base_token_pieces))),
+                labels=base_token_pieces
+            )
             + labs(
-                title="Custom Heatmap Title",
+                title="Custom Heatmap Title", # TODO
                 x="Custom X Label",
-                y="Custom Y Label",
+                y=f"Restored layer in {self.model_id}",
                 fill="Probability Scale",
                 color="Probability Scale"
             )

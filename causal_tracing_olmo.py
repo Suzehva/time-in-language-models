@@ -85,7 +85,7 @@ class CausalTracer:
     def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, year: int):
         # TODO might need to take care of choosing the corrupted tokens manually...
         prompt_list = self.num_tokens_in_prompt(prompt.split(" "))
-        prompt_len = len(self.num_tokens_in_prompt(prompt.split(" ")))
+        prompt_len = len(prompt_list)
 
         token_list = self.num_tokens_in_prompt((prompt.split(" ")[0:dim_corrupted_words]))  # takes the first dct words we want to corrupt
         dim_corrupted_tokens = len(token_list) 
