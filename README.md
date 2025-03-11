@@ -17,6 +17,5 @@ reasoning, how an LM reasons about timelines and times relative to each other.
 
 Finding answers to the second and third question is exciting because it could advance our understand-
 ing of how time is represented internally in LM’s, which could be helpful in determining strategies to
-make LM’s better at time-related tasks. We will use causal tracing (as described in ROME)
-to answer our second question and the ROME method (as described in ROME) to answer
-the third.
+make LM’s better at time-related tasks. We will utilize causal tracing and interchange interventions 
+(as outlined in Stanford's pyvene https://github.com/stanfordnlp/pyvene) to explore this.
