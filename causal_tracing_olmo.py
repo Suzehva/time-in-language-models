@@ -214,13 +214,13 @@ class CausalTracer:
                         n_restores = len(config.representations) - 1
                         intervenable = IntervenableModel(config, self.model)
 
-                        i_print = {
-                                "sources->base": (
-                                    [None] + [[[pos_i]]]*n_restores,
-                                    prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
-                                )
-                            }
-                        print("\nADITI PRINT TEST : "+str(i_print))
+                        # i_print = {
+                        #         "sources->base": (
+                        #             [None] + [[[pos_i]]]*n_restores,
+                        #             prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
+                        #         )
+                        #     }
+                        # print("\nADITI PRINT TEST : "+str(i_print))
                         _, counterfactual_outputs = intervenable(
                             base,
                             [None] + [base]*n_restores,
@@ -359,10 +359,19 @@ def main():
         #                     list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)          # parallels before
         # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
         #                           list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)     # slighty longer prompt for 1980
-        tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
-                                list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
+        # tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
+        #                         list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
         # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
         #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+
+        tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+                                  list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)     # slighty longer prompt for 1980
+        tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
+                                list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
+        tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
+                                list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+
+
 
     if(0):
         # used to generate lots of graphs
