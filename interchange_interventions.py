@@ -171,12 +171,17 @@ class InterchangeIntervention:
         # labels: ['The', 'capital', 'of', 'Spain', 'is']
         # breaks: [0, 1, 2, 3, 4]
         
-
+        title_text = f"Base: {base}, Source: {sources}"
         plot_heat = (
             ggplot(df)
-            + geom_tile(aes(x="pos", y="layer", fill="prob", color="prob"))
+            + geom_tile(aes(x="pos", y="layer", fill="prob"))
             + facet_wrap("~token")
-            + theme(axis_text_x=element_text(rotation=90))
+            + scale_fill_cmap("Purples") 
+
+            + theme(
+                axis_text_x=element_text(rotation=90),
+                plot_title=element_text(size=len(title_text)//8)  # Correct parameter for title font size
+            )
             + scale_x_continuous(
                 breaks=breaks,
                 labels=labels
@@ -185,10 +190,9 @@ class InterchangeIntervention:
                 breaks=list(range(self.model.config.num_hidden_layers))
             )
             + labs(
-                title=f"Base: {base}, Source: {sources}", # TODO
+                title=title_text, # TODO
                 y=f"Restored {self.component} for layer in {self.model_id}",
                 fill="Probability Scale",
-                color="Probability Scale"
             )
         )
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
@@ -205,12 +209,13 @@ class InterchangeIntervention:
             print(f"cannot make bar plot for {layer_to_filter} because the model ({self.model_id}) only has {self.model.config.num_hidden_layers} layers")
         filtered = df[df["pos"] == layer_to_filter]
 
-
         plot_bar = (
             ggplot(filtered)
             + geom_bar(aes(x="layer", y="prob", fill="token"), stat="identity")
-            + theme(axis_text_x=element_text(rotation=90), legend_position="none")
-            #+ scale_y_log10()
+            + theme(
+                axis_text_x=element_text(rotation=90), 
+                legend_position="none",
+            )
             + facet_wrap("~token", ncol=1)
             + labs(
                 title=f"Base: {base}, Source: {sources}",
