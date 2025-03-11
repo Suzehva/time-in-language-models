@@ -25,9 +25,12 @@ from plotnine import (
     theme,
     element_text,
     xlab, ylab, 
-    ggsave
+    ggsave,
+    facet_wrap,
+    labs
 )
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
+from plotnine.scales import scale_x_continuous, scale_y_continuous
 from tqdm import tqdm
 
 # use this to control whether you compute and plot stuff besides the block output
@@ -83,8 +86,8 @@ class CausalTracer:
 
     def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, year: int):
         # TODO might need to take care of choosing the corrupted tokens manually...
-        if (prompt[-1] != " "):
-            prompt+=" " # in case the user did not add a space at the end of the prompt. not adding a space messes up the prompt list calculation below.
+        # if (prompt[-1] != " "):
+        #     prompt+=" " # in case the user did not add a space at the end of the prompt. not adding a space messes up the prompt list calculation below.
         
         _, prompt_tokens = self.string_to_token_ids_and_tokens(prompt)
         len_prompt_tokens = len(prompt_tokens)
@@ -241,7 +244,7 @@ class CausalTracer:
                 df = pd.DataFrame(data) 
 
                 os.makedirs(self.folder_path, exist_ok=True)
-                soln_txt = ''.join([s.replace(' ', '_') for s in solns])
+                soln_txt = ''.join([s.replace(' ', ',') for s in solns])[1:]
                 filepath = "./"+self.folder_path+"/"+run_type+"_"+prompt.descriptive_label+"_"+soln_txt+"_"+stream+"_"+timestamp
 
                 df.to_csv(filepath+".csv") # write csv
@@ -257,17 +260,32 @@ class CausalTracer:
         custom_labels = prompt.custom_labels
         breaks = prompt.breaks
 
-        plot = (
-            ggplot(df, aes(x="layer", y="pos"))    
+        print(filepath)
 
-            + geom_tile(aes(fill="p("+soln_txt+")"))
-            + scale_fill_cmap(colors[stream]) + xlab(titles[stream])
-            + scale_y_reverse(
-                limits = (-0.5, len(breaks)+.5),   # aditi edit! previously, hardcoded (-.5, 6.5)
-                breaks=breaks, labels=custom_labels) 
-            + theme(figure_size=(5, 4)) + ylab("") 
-            + theme(axis_text_y  = element_text(angle = 90, hjust = 1))
+        plot = (
+            ggplot(df)
+            + geom_tile(aes(x="pos", y="layer", fill="p("+soln_txt+")"))
+            + scale_fill_cmap(colors[stream]) 
+            + theme(
+                figure_size=(4, 5),
+                axis_text_x=element_text(rotation=90)
+            )
+            + scale_x_continuous(
+                breaks=breaks,
+                labels=custom_labels
+            )
+            + scale_y_continuous(
+                breaks=list(range(self.model.config.num_hidden_layers)),  # num hidden layers in model
+                labels=[str(i) for i in range(self.model.config.num_hidden_layers)]  # Convert to strings for labels
+            )
+            + labs(
+                title=f"{prompt.prompt}",
+                y=f"Restored layer in {self.model_id}",
+                fill="p("+soln_txt+")",
+            )
+
         )
+
         ggsave(
             plot, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
         )
@@ -326,6 +344,7 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
 def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
+
 
     # create all the prompts we wanna use
     YEARS = [1980, 2000, 2020, 2050] 
