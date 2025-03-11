@@ -124,7 +124,7 @@ class InterchangeIntervention:
                         {
                             "token": format_token(self.tokenizer, token),
                             "prob": float(distrib[0][-1][token]),
-                            "layer": f"f{layer_i}",
+                            "layer": layer_i,
                             "pos": pos_i,
                             "type": self.component,
                         }
@@ -157,13 +157,13 @@ class InterchangeIntervention:
 
 
     def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
-        df["layer"] = df["layer"].astype("category")
+        df["layer"] = df["layer"].astype(int)
         df["token"] = df["token"].astype("category")
-        nodes = []
-        for l in range(self.model.config.num_hidden_layers - 1, -1, -1):
-            nodes.append(f"f{l}")
-            nodes.append(f"a{l}")
-        df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
+        # nodes = []
+        # for l in range(self.model.config.num_hidden_layers - 1, -1, -1):
+        #     nodes.append(f"f{l}")
+        #     nodes.append(f"a{l}")
+        # df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
 
         breaks, labels = list(range(len(self.base_tokens))), self.base_tokens
         print(f"breaks: {breaks}, labels: {labels}")
@@ -180,6 +180,9 @@ class InterchangeIntervention:
             + scale_x_continuous(
                 breaks=breaks,
                 labels=labels
+            )
+            + scale_y_continuous(
+                breaks=list(range(self.model.config.num_hidden_layers))
             )
             + labs(
                 title=f"Base: {base}, Source: {sources}", # TODO
@@ -254,7 +257,7 @@ def main():
     interchange_intervention.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
         interchange_intervention.factual_recall(prompt=s_p)
-    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_input") # options: attention_input, mlp_output, block_output
+    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
 
