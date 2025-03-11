@@ -24,6 +24,8 @@ from plotnine import (
     facet_wrap,
     theme,
     element_text,
+    element_line,
+    element_rect,
     geom_bar,
     geom_hline,
     scale_y_log10,
@@ -175,7 +177,7 @@ class InterchangeIntervention:
         return token_ids, tokens
 
 
-    def heatmap_plot(self, df, output_df, base: str, sources: list[str], output_to_measure: list[str]):
+    def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
         df["layer"] = df["layer"].astype(int)
         df["token"] = df["token"].astype("category")
         breaks, labels = list(range(len(self.base_tokens))), self.base_tokens
@@ -218,29 +220,47 @@ class InterchangeIntervention:
             plot_heat, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
         )
 
-        # --------------------------------------------------------
+    def text_heatmap_plot(self, output_df, base: str, sources: list[str]):
+        base_txt = base.replace(' ', '_')
+        breaks, labels = list(range(len(self.base_tokens))), self.base_tokens
         output_df["layer"] = output_df["layer"].astype(int)
+        
+        # Create pivot tables for both tokens and probabilities
         token_pivot = output_df.pivot(index='layer', columns='pos', values='token')
-
+        prob_pivot = output_df.pivot(index='layer', columns='pos', values='prob')
+        
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         filepath = "./"+self.folder_path+"/token_text_"+base_txt+"_"+timestamp
         token_pivot.to_csv(filepath+"_tokens.csv")
-
-        # Create a text annotation dataframe
-        # We need to melt the pivot table back to long format for plotting
+        
+        # Melt both pivot tables to long format
         text_data = token_pivot.reset_index().melt(
             id_vars='layer', 
             var_name='pos', 
             value_name='token'
         )
-        text_data['pos'] = text_data['pos'].astype(int)
-        text_data['dummy_color'] = 1
-
+        prob_data = prob_pivot.reset_index().melt(
+            id_vars='layer',
+            var_name='pos',
+            value_name='prob'
+        )
+        
+        # Merge the two dataframes to get both token and probability in one
+        merged_data = pd.merge(text_data, prob_data, on=['layer', 'pos'])
+        merged_data['pos'] = merged_data['pos'].astype(int)
+        
         plot_text = (
-            ggplot(text_data)
-            + geom_tile(aes(x="pos", y="layer", fill="dummy_color"), alpha=0.3)
-            + geom_text(aes(x="pos", y="layer", label="token"), size=8)
-            + theme(axis_text_x=element_text(rotation=90))
+            ggplot(merged_data)
+            + geom_tile(aes(x="pos", y="layer", fill="prob"), color="white")
+            + geom_text(aes(x="pos", y="layer", label="token"), size=8, color="black")
+            + scale_fill_cmap("Purples") 
+            + theme(
+                axis_text_x=element_text(rotation=90),
+                plot_title=element_text(size=10),
+                panel_grid_major=element_line(color="white", size=0.5),
+                panel_grid_minor=element_line(color="white", size=0.25),
+                panel_background=element_rect(fill="white")
+            )
             + scale_x_continuous(
                 breaks=breaks,
                 labels=labels
@@ -251,11 +271,11 @@ class InterchangeIntervention:
             + labs(
                 title=f"Top Predicted Tokens - Base: {base}, Source: {sources}",
                 y=f"Layer in {self.model_id}",
-                x="Position"
+                x="Position",
+                fill="Token Probability"  # Correct legend title
             )
-            # Hide the fill legend since it's just a dummy
-            + theme(legend_position="none")
         )
+        
         print(f"saving token text heatmap to {filepath}.pdf")
         ggsave(
             plot_text, filename=filepath+".pdf", dpi=300, width=12, height=10
@@ -294,35 +314,17 @@ class InterchangeIntervention:
         
 
 def main():
-
-    # tutorial inputs
-    # base_prompt = "The capital of Spain is" # sentence where part of residual stream will be replaced
-    # source_prompts = ["The capital of Italy is"] # sentence from which we take the replacement
-    # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
-    # output_to_measure = [" Rome", " Madrid"]
-    # interchange_intervention.factual_recall(prompt=base_prompt)
-    # for s_p in source_prompts:
-    #     interchange_intervention.factual_recall(prompt=s_p)
-    # results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    # interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    # interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
-
-
-    # time inputs
-    # TODO: what if base and source prompts don't have the same amount of tokens?
-    # base_prompt = "On a beautiful day in 1980 there" # sentence where part of residual stream will be replaced
-    # source_prompts = ["On a beautiful day in 2020 there"] # sentence from which we take the replacement
     base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
     source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
     interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
-    #interchange_intervention = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # options: allenai/OLMo-1B-hf or gpt2
+    #interchange_intervention = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # for if you want to use gpt
     output_to_measure = [" was", " will"] # Make sure to include space at the beginning!
     interchange_intervention.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
         interchange_intervention.factual_recall(prompt=s_p)
     results_df, output_results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
-    interchange_intervention.heatmap_plot(df=results_df, output_df=output_results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-
+    interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    interchange_intervention.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
     interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
 
 if __name__ == "__main__":
