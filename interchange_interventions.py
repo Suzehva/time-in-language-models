@@ -37,6 +37,7 @@ from plotnine.scales import scale_y_reverse, scale_fill_cmap
 # note: this is using GPT
 
 from plotnine import (
+    geom_text,
     ggplot,
     geom_tile,
     aes,
@@ -213,7 +214,7 @@ class InterchangeIntervention:
             plot_heat, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
         )
 
-        # --------------
+        # --------------------------------------------------------
         output_df["layer"] = output_df["layer"].astype(int)
         token_pivot = output_df.pivot(index='layer', columns='pos', values='token')
 
