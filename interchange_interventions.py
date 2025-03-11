@@ -105,6 +105,7 @@ class InterchangeIntervention:
         tokens = [self.tokenizer.encode(word) for word in output_to_measure] # tokenizer.encode returns list of token ids
 
         intervention_data = []
+        output_intervention_data = []
 
         for layer_i in tqdm(range(self.model.config.num_hidden_layers)): # looping over all hidden layers in model (every layer is an MLP?)
             config = self.simple_position_config(self.component, layer_i)
@@ -113,23 +114,39 @@ class InterchangeIntervention:
                 _, counterfactual_outputs = intervenable( 
                     # counterfactual_outputs stores lots of things, amongst which hidden states of the base model with the mlp_output 
                     # at position i replaced with the mlp_output of source
-                    self.base_ids, self.sources_ids, {"sources->base": pos_i} #why can we pass in a list of sources??
+                    self.base_ids, self.sources_ids, {"sources->base": pos_i} # TODO: why can we pass in a list of sources??
                 )
                 counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # TODO: there must be a better way
                 distrib = embed_to_distrib(
                     self.model, counterfactual_outputs.last_hidden_state, logits=False
                 )
+                # if (layer_i == self.model.config.num_hidden_layers - 1) and (pos_i == len(self.base_ids.input_ids[0]) - 1):
+                #     # this is the last hidden state
+                #     self.output_token = top_vals(self.tokenizer, distrib[0][-1], n=1, return_results=True)
+                    
                 for token in tokens:
                     intervention_data.append(
                         {
-                            "token": format_token(self.tokenizer, token),
+                            "token": format_token(self.tokenizer, token), # this is an actual word piece
                             "prob": float(distrib[0][-1][token]),
                             "layer": layer_i,
                             "pos": pos_i,
                             "type": self.component,
                         }
                     )
-        df = pd.DataFrame(intervention_data)
+                
+                top_token_info = top_vals(self.tokenizer, distrib[0][-1], n=1, return_results=True)
+                output_intervention_data.append(
+                    {
+                        "token": top_token_info[0][0], # this is an actual word piece
+                        "prob": top_token_info[0][1], # probability of the token that was outputted
+                        "layer": layer_i,
+                        "pos": pos_i,
+                        "type": self.component,
+                    }
+                )
+        df_intervention_data = pd.DataFrame(intervention_data)
+        df_output_intervention_data = pd.DataFrame(output_intervention_data)
 
         os.makedirs(self.folder_path, exist_ok=True)
         base_txt = base.replace(' ', '_')
@@ -137,8 +154,9 @@ class InterchangeIntervention:
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         filepath = "./"+self.folder_path+"/"+base_txt+output_prob_text+"_"+timestamp
         print(f"saving interchange intervention data to {filepath}.pdf")
-        df.to_csv(filepath+".csv")
-        return df
+        df_intervention_data.to_csv(filepath+".csv")
+        df_output_intervention_data.to_csv(filepath+"_output.csv")
+        return df_intervention_data, df_output_intervention_data
 
     def string_to_token_ids_and_tokens(self, s: str):
         # token ids's are the numbers, tokens are the text pieces
@@ -156,26 +174,19 @@ class InterchangeIntervention:
         return token_ids, tokens
 
 
-    def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
+    def heatmap_plot(self, df, output_df, base: str, sources: list[str], output_to_measure: list[str]):
         df["layer"] = df["layer"].astype(int)
         df["token"] = df["token"].astype("category")
-        # nodes = []
-        # for l in range(self.model.config.num_hidden_layers - 1, -1, -1):
-        #     nodes.append(f"f{l}")
-        #     nodes.append(f"a{l}")
-        # df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
-
         breaks, labels = list(range(len(self.base_tokens))), self.base_tokens
         print(f"breaks: {breaks}, labels: {labels}")
         # Example:
         # labels: ['The', 'capital', 'of', 'Spain', 'is']
         # breaks: [0, 1, 2, 3, 4]
-        
 
         plot_heat = (
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="prob", color="prob"))
-            + facet_wrap("~token")
+            + facet_wrap("~token") # splits the graph into multiple graphs, one for each token
             + theme(axis_text_x=element_text(rotation=90))
             + scale_x_continuous(
                 breaks=breaks,
@@ -191,20 +202,65 @@ class InterchangeIntervention:
                 color="Probability Scale"
             )
         )
-        timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        
         base_txt = base.replace(' ', '_')
         output_prob_text = '(' + ''.join([s.replace(' ', '_') for s in output_to_measure]) + ')'
+
+        timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         filepath = "./"+self.folder_path+"/heat_"+base_txt+output_prob_text+"_"+timestamp
         print(f"saving interchange intervention heatmap to {filepath}.pdf")
         ggsave(
             plot_heat, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
         )
+
+        # --------------
+        output_df["layer"] = output_df["layer"].astype(int)
+        token_pivot = output_df.pivot(index='layer', columns='pos', values='token')
+
+        timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        filepath = "./"+self.folder_path+"/token_text_"+base_txt+"_"+timestamp
+        token_pivot.to_csv(filepath+"_tokens.csv")
+
+        # Create a text annotation dataframe
+        # We need to melt the pivot table back to long format for plotting
+        text_data = token_pivot.reset_index().melt(
+            id_vars='layer', 
+            var_name='pos', 
+            value_name='token'
+        )
+        text_data['pos'] = text_data['pos'].astype(int)
+        text_data['dummy_color'] = 1
+
+        plot_text = (
+            ggplot(text_data)
+            + geom_tile(aes(x="pos", y="layer", fill="dummy_color"), alpha=0.3)
+            + geom_text(aes(x="pos", y="layer", label="token"), size=8)
+            + theme(axis_text_x=element_text(rotation=90))
+            + scale_x_continuous(
+                breaks=breaks,
+                labels=labels
+            )
+            + scale_y_continuous(
+                breaks=list(range(self.model.config.num_hidden_layers))
+            )
+            + labs(
+                title=f"Top Predicted Tokens - Base: {base}, Source: {sources}",
+                y=f"Layer in {self.model_id}",
+                x="Position"
+            )
+            # Hide the fill legend since it's just a dummy
+            + theme(legend_position="none")
+        )
+        print(f"saving token text heatmap to {filepath}.pdf")
+        ggsave(
+            plot_text, filename=filepath+".pdf", dpi=300, width=12, height=10
+        )
+    
     
     def bar_plot(self, df, base: str, sources: list[str], output_to_measure: list[str], layer_to_filter: int):
         if layer_to_filter > self.model.config.num_hidden_layers:
             print(f"cannot make bar plot for {layer_to_filter} because the model ({self.model_id}) only has {self.model.config.num_hidden_layers} layers")
         filtered = df[df["pos"] == layer_to_filter]
-
 
         plot_bar = (
             ggplot(filtered)
@@ -257,8 +313,9 @@ def main():
     interchange_intervention.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
         interchange_intervention.factual_recall(prompt=s_p)
-    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
-    interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    results_df, output_results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
+    interchange_intervention.heatmap_plot(df=results_df, output_df=output_results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+
     interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
 
 if __name__ == "__main__":
