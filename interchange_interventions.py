@@ -242,25 +242,32 @@ class InterchangeIntervention:
         
 
 def main():
-    base_prompt = "The capital of Spain is" # sentence where part of residual stream will be replaced
-    source_prompts = ["The capital of Italy is"] # sentence from which we take the replacement
-    interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
-    output_to_measure = [" Rome", " Madrid"]
-    #interchange_intervention.factual_recall(prompt=base_prompt)
-    #for s_p in source_prompts:
-    #    interchange_intervention.factual_recall(prompt=s_p)
-    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
 
-
-    # for time project;
-    # base_prompt = "On a beautiful day in 1980 there"  # expect "was/were" with 15%
-    # base_prompt = "On a beautiful day in 2020 there"  # expect "is/are" with 10%
-    # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf")
-    # output_to_measure = [" was", " is"]  # TODO: extend this to include "were"/"are"
+    # tutorial inputs
+    # base_prompt = "The capital of Spain is" # sentence where part of residual stream will be replaced
+    # source_prompts = ["The capital of Italy is"] # sentence from which we take the replacement
+    # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
+    # output_to_measure = [" Rome", " Madrid"]
+    # interchange_intervention.factual_recall(prompt=base_prompt)
+    # for s_p in source_prompts:
+    #     interchange_intervention.factual_recall(prompt=s_p)
     # results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     # interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    # interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=4)
+
+
+    # time inputs
+    # TODO: what if base and source prompts don't have the same amount of tokens?
+    base_prompt = "On a beautiful day in 1980 there" # sentence where part of residual stream will be replaced
+    source_prompts = ["On a beautiful day in 2020 there"] # sentence from which we take the replacement
+    interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
+    output_to_measure = [" was", " is"]
+    interchange_intervention.factual_recall(prompt=base_prompt)
+    for s_p in source_prompts:
+        interchange_intervention.factual_recall(prompt=s_p)
+    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=5)
 
 if __name__ == "__main__":
     main()
