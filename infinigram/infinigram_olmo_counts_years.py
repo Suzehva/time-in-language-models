@@ -2,9 +2,8 @@ import requests
 import time
 import matplotlib
 
-
 # Define the range of numbers
-numbers = range(1500, 2201)
+numbers = range(1400, 2201)
 
 # Initialize a list to store the results
 counts = []
@@ -21,6 +20,7 @@ for num in numbers:
     while 'count' not in result: # ensures we get an entry!
         response = requests.post('https://api.infini-gram.io/', json=payload)
         result = response.json()
+        print("waiting!")
         # print("RESULT: " + str(result))
     
     counts.append(result['count'])

@@ -39,8 +39,8 @@ from dataclasses import dataclass
 @dataclass
 class Prompt:
     prompt: str
-    prompt_len: int
-    dim_corrupted_tokens: int
+    len_prompt_tokens: int
+    len_corrupted_tokens: int
     corrupted_tokens_indices: list[list]
     list_of_soln: list[list[str]]
     descriptive_label: str
@@ -66,7 +66,6 @@ colors={
 } 
 
 
-
 class CausalTracer:
     def __init__(self, model_id, folder_path="pyvene_data_ct_olmo", device=None):
         self.model_id = model_id
@@ -87,21 +86,23 @@ class CausalTracer:
         if (prompt[-1] != " "):
             prompt+=" " # in case the user did not add a space at the end of the prompt. not adding a space messes up the prompt list calculation below.
         
-        prompt_list = self.num_tokens_in_prompt(prompt.split(" "))
-        prompt_len = len(prompt_list)
+        _, prompt_tokens = self.string_to_token_ids_and_tokens(prompt)
+        len_prompt_tokens = len(prompt_tokens)
 
-        token_list = self.num_tokens_in_prompt((prompt.split(" ")[0:dim_corrupted_words]))  # takes the first dct words we want to corrupt
-        dim_corrupted_tokens = len(token_list) 
+        to_corrupt = " ".join(prompt.split(" ")[:dim_corrupted_words])  # the part of the sentence we want to corrupt (the first dim_corrupted_words words)
+        _, to_corr_tokens = self.string_to_token_ids_and_tokens(to_corrupt)
+        len_corrupted_tokens = len(to_corr_tokens) 
 
-        corrupted_tokens_indices = [[[i for i in range(dim_corrupted_tokens)]]]
-        custom_labels = self.add_asterisks(prompt_list, dim_corrupted_tokens)
-        breaks = list(range(prompt_len))
+        corrupted_tokens_indices = [[[i for i in range(len_corrupted_tokens)]]]
+       
+        custom_labels = self.add_asterisks(prompt_tokens, len_corrupted_tokens) # add asteriks to the first len_corrupted_tokens in the prompt tokens
+        breaks = list(range(len_prompt_tokens))
 
         # add a prompt we want to test in the format of a prompt tuple:
-        # (prompt, prompt_len, dim_corrupted_tokens, corrupted_tokens, list_of_soln, custom_labels, breaks)
+        # (prompt, len_prompt_tokens, len_corrupted_tokens, corrupted_tokens, list_of_soln, custom_labels, breaks)
         # for example:
         # ("In 2050 there", 3, 2, [[[0, 1]]], [ [" was", " were"], [" will"]], ["In*", "2050*", "there"], [0, 1, 2], 1980)
-        prompt_obj = Prompt(prompt, prompt_len, dim_corrupted_tokens, corrupted_tokens_indices, list_of_soln, descriptive_label, custom_labels, breaks, year) 
+        prompt_obj = Prompt(prompt, len_prompt_tokens, len_corrupted_tokens, corrupted_tokens_indices, list_of_soln, descriptive_label, custom_labels, breaks, year) 
                 
         print("\nPROMPT OBJ\n" + str(prompt_obj))
         self.prompts.append(prompt_obj)
@@ -112,26 +113,22 @@ class CausalTracer:
     def add_asterisks(self, prompt, n):
         return [word + "*" if i < n else word for i, word in enumerate(prompt)]
 
-    def num_tokens_in_prompt(self, prompt: list[str]):
+
+    def string_to_token_ids_and_tokens(self, s: str):
+        # token ids's are the numbers, tokens are the text pieces
+        token_ids = self.tokenizer(s, return_tensors="pt").to(self.device)
         """
-        Returns a list of strings based on how the model tokenizes the prompt
-        Note: there could be multiple token id's for a word
+        note: this^ returns more than just token_ids, also info about attention masks
+        e.g:
+        {
+            'input_ids': tensor([[1437, 318, 12696, 2952, 30]]), 
+            'attention_mask': tensor([[1, 1, 1, 1, 1]])
+        }
         """
-        token_list = []
-        
-        for word in prompt:
-            # get id's that correspond to a word and its subwords
-            token_ids = self.tokenizer(word, add_special_tokens=False)["input_ids"] 
-            # get tokens that each id corresponds to. 
-            token_pieces = self.tokenizer.convert_ids_to_tokens(token_ids) 
+        tokens = self.tokenizer.convert_ids_to_tokens(token_ids['input_ids'][0])
+        print(f"{len(tokens)} tokens in '{s}': {tokens}")
+        return token_ids, tokens
 
-            token_list += token_pieces
-
-        # TODO: look into this. why is the attention sometimes being returned as [1,1] and sometimes [] (usually each entry is [1])
-        # print("TOKENIZER: " +str(self.tokenizer(prompt)))#, return_tensors="pt")))
-        # print("TOKEN PIECES: " +str(token_list))
-
-        return token_list
     
     def list_from_prompt(self, prompt: str):
         return prompt.split(" ")
@@ -154,7 +151,7 @@ class CausalTracer:
 
         base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
         
-        NoiseIntervention.dim_corrupted_tokens = prompt.dim_corrupted_tokens
+        NoiseIntervention.dim_corrupted_tokens = prompt.len_corrupted_tokens
         NoiseIntervention.DEVICE = self.device
         config = IntervenableConfig(
             model_type=type(self.model_id),
@@ -185,15 +182,17 @@ class CausalTracer:
         print(prompt.prompt)
 
         base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
+        print("\nDEBUG base: " + str(base))
+
         for i in range(len(prompt.list_of_soln)):
             solns = prompt.list_of_soln[i]
             print("\ntense:  " + str(solns))
             if run_type=="relative":
                 if relative_prompt_focus not in solns:
                     print("skipped!")
-                    continue  # TODO: can check if its relative, and then continue if its a tense we dont care about
+                    continue  # check if its relative, and continue if its a tense we dont care about
              
-            tokens = [self.tokenizer.encode(soln)[0] for soln in solns]
+            tokens = [self.tokenizer.encode(soln)[0] for soln in solns]  # this provides same results as suze's tokenizer method
 
             for stream in ["block_output", "mlp_activation", "attention_output"]:
                 # don't plot anything besides block output if we dont want it
@@ -202,11 +201,11 @@ class CausalTracer:
                 
                 data = []
                 for layer_i in tqdm(range(self.model.config.num_hidden_layers)):
-                    for pos_i in range(prompt.prompt_len):
+                    for pos_i in range(prompt.len_prompt_tokens):
                         config = restore_corrupted_with_interval_config(
                             layer=layer_i,
                             device=self.device, 
-                            dim_corrupted_tokens=prompt.dim_corrupted_tokens,
+                            dim_corrupted_tokens=prompt.len_corrupted_tokens,
                             stream=stream, 
                             window=1 if stream == "block_output" else 10, 
                             num_layers=self.model.config.num_hidden_layers,      
@@ -214,13 +213,6 @@ class CausalTracer:
                         n_restores = len(config.representations) - 1
                         intervenable = IntervenableModel(config, self.model)
 
-                        # i_print = {
-                        #         "sources->base": (
-                        #             [None] + [[[pos_i]]]*n_restores,
-                        #             prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
-                        #         )
-                        #     }
-                        # print("\nADITI PRINT TEST : "+str(i_print))
                         _, counterfactual_outputs = intervenable(
                             base,
                             [None] + [base]*n_restores,
@@ -244,9 +236,6 @@ class CausalTracer:
                             subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
                             prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
                             prob = prob - prob_subtr
-
-                        # prob = pos_i/prompt.prompt_len  # debugging. QUESTION: do we even draw on all of them? ANS: YES
-
 
                         data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
                 df = pd.DataFrame(data) 
@@ -339,17 +328,19 @@ def main():
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
 
     # create all the prompts we wanna use
-    YEARS = [ 2020, 2050] # 1980, 2000,
+    YEARS = [1980, 2000, 2020, 2050] 
     # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
     # NOTE!! no commas allowed in prompts. it breaks sometimes.
-    PROMPTS = [("On a gloomy day in [[YEAR]] there", 6, "gloomy"), ("On a rainy day in [[YEAR]] there", 6, "rainy"), 
-                ("On a beautiful day in [[YEAR]] there", 6, "beautiful"), 
-               ("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof")]
+    PROMPTS = [#("On a gloomy day in [[YEAR]] there", 6, "gloomy"), ("On a rainy day in [[YEAR]] there", 6, "rainy"), 
+                ("In [[YEAR]] on a beautiful day there", 6, "beautiful_bkw")]
+                # ("On a beautiful day in [[YEAR]] there", 6, "beautiful")]
+               #("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof")]
                 # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
     TENSES = [[" was", " were"], [" will"], [" is", " are"]]
+        # should i also include "was" and "were" without the space??
 
 
-    if (1):
+    if (0):
         # aditi's mini-experiment to see whether the year affects the output, or if there's something else at play here...
         # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
         #                           list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)         # this is our usual "there" test
@@ -365,15 +356,14 @@ def main():
         #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
 
         tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
-                                  list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)     # slighty longer prompt for 1980
+                                  list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)     # slighty longer prompt after 1980
         tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
                                 list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
         tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
                                 list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
 
 
-
-    if(0):
+    if(1):
         # used to generate lots of graphs
         for y in YEARS:
             for (prompt_template, num_words_to_corrupt, descr) in PROMPTS:
@@ -382,8 +372,6 @@ def main():
                 # dim_corrupted_words is observed to usually be len_words_prompt-1 because the year is usually the 2nd to last word
                 tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words_to_corrupt, 
                                 list_of_soln=TENSES, descriptive_label=descr_label, year=y)
-
-
 
 
     # loop over every prompt to run pyvene
@@ -403,7 +391,7 @@ def main():
             relative_prompt_focus = " was" # past
             if p.year > 2005:
                 relative_prompt_focus=" is" # present
-            if p.year > 2030:
+            if p.year > 2025:
                 relative_prompt_focus=" will" # future
 
             tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus)  # with subtraction
