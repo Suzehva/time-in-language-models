@@ -95,8 +95,9 @@ class InterchangeIntervention:
         )
         return config
 
-    def intervene(self, base: str, sources: list[str], output_to_measure: list[str]):
+    def intervene(self, base: str, sources: list[str], output_to_measure: list[str], component: str):
         self.base_ids, self.base_tokens = self.string_to_token_ids_and_tokens(base)
+        self.component = component
         sources_ids, sources_tokens = self.string_to_token_ids_and_tokens(sources)
         if (len(self.base_ids.input_ids[0]) != len(sources_ids.input_ids[0])):
             raise Exception(f"number of tokens in source ({len(sources_ids.input_ids[0])}) are not the same as number of tokens in the base ({len(self.base_ids.input_ids[0])}). Source tokens: {sources_tokens}, Base tokens: {self.base_tokens}")
@@ -106,7 +107,7 @@ class InterchangeIntervention:
         intervention_data = []
 
         for layer_i in tqdm(range(self.model.config.num_hidden_layers)): # looping over all hidden layers in model (every layer is an MLP?)
-            config = self.simple_position_config("mlp_output", layer_i)
+            config = self.simple_position_config(self.component, layer_i)
             intervenable = IntervenableModel(config, self.model)
             for pos_i in range(len(self.base_ids.input_ids[0])): # looping over all the tokens in the base sentence
                 _, counterfactual_outputs = intervenable( 
@@ -123,30 +124,9 @@ class InterchangeIntervention:
                         {
                             "token": format_token(self.tokenizer, token),
                             "prob": float(distrib[0][-1][token]),
-                            "layer": f"f{layer_i}",
+                            "layer": layer_i,
                             "pos": pos_i,
-                            "type": "mlp_output",
-                        }
-                    )
-
-            config = self.simple_position_config("attention_input", layer_i)
-            intervenable = IntervenableModel(config, self.model)
-            for pos_i in range(len(self.base_ids.input_ids[0])):
-                _, counterfactual_outputs = intervenable(
-                    self.base_ids, self.sources_ids, {"sources->base": pos_i}
-                )
-                counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # TODO: there must be a better way
-                distrib = embed_to_distrib(
-                    self.model, counterfactual_outputs.last_hidden_state, logits=False
-                )
-                for token in tokens:
-                    intervention_data.append(
-                        {
-                            "token": format_token(self.tokenizer, token),
-                            "prob": float(distrib[0][-1][token]),
-                            "layer": f"a{layer_i}",
-                            "pos": pos_i,
-                            "type": "attention_input",
+                            "type": self.component,
                         }
                     )
         df = pd.DataFrame(intervention_data)
@@ -177,13 +157,13 @@ class InterchangeIntervention:
 
 
     def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
-        df["layer"] = df["layer"].astype("category")
+        df["layer"] = df["layer"].astype(int)
         df["token"] = df["token"].astype("category")
-        nodes = []
-        for l in range(self.model.config.num_hidden_layers - 1, -1, -1):
-            nodes.append(f"f{l}")
-            nodes.append(f"a{l}")
-        df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
+        # nodes = []
+        # for l in range(self.model.config.num_hidden_layers - 1, -1, -1):
+        #     nodes.append(f"f{l}")
+        #     nodes.append(f"a{l}")
+        # df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
 
         breaks, labels = list(range(len(self.base_tokens))), self.base_tokens
         print(f"breaks: {breaks}, labels: {labels}")
@@ -201,9 +181,12 @@ class InterchangeIntervention:
                 breaks=breaks,
                 labels=labels
             )
+            + scale_y_continuous(
+                breaks=list(range(self.model.config.num_hidden_layers))
+            )
             + labs(
                 title=f"Base: {base}, Source: {sources}", # TODO
-                y=f"Restored layer in {self.model_id}",
+                y=f"Restored {self.component} for layer in {self.model_id}",
                 fill="Probability Scale",
                 color="Probability Scale"
             )
@@ -232,7 +215,7 @@ class InterchangeIntervention:
             + labs(
                 title=f"Base: {base}, Source: {sources}",
                 y=f"Probability Scale",
-                x=f"Restored layer ('{self.base_tokens[layer_to_filter]}') in {self.model_id}",
+                x=f"Restored {self.component} for layer ('{self.base_tokens[layer_to_filter]}') in {self.model_id}",
                 fill="Probability Scale",
                 color="Probability Scale"
             )
@@ -274,7 +257,7 @@ def main():
     interchange_intervention.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
         interchange_intervention.factual_recall(prompt=s_p)
-    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
 
