@@ -71,11 +71,9 @@ class InterchangeIntervention:
         print("FACTUAL RECALL:")
         print(prompt)
 
-        inputs = [
-            self.tokenizer(prompt, return_tensors="pt").to(self.device),
-        ]
+        inputs, _ = self.string_to_token_ids_and_tokens(prompt)
         if self.model_id == "allenai/OLMo-1B-hf":
-            res = self.model.model(**inputs[0]) 
+            res = self.model.model(**inputs) # removed [0] from **inputs[0] because input is now not a list
         else:
             # assuming this is gpt2
             res = self.model(**inputs[0]) 
@@ -98,20 +96,23 @@ class InterchangeIntervention:
         return config
 
     def intervene(self, base: str, sources: list[str], output_to_measure: list[str]):
-        base_tokenized = self.tokenizer(base, return_tensors="pt")
-        sources_tokenized = [self.tokenizer(sources, return_tensors="pt")]
-        tokens = [self.tokenizer.encode(word) for word in output_to_measure]
+        self.base_ids, self.base_tokens = self.string_to_token_ids_and_tokens(base)
+        sources_ids, sources_tokens = self.string_to_token_ids_and_tokens(sources)
+        if (len(self.base_ids.input_ids[0]) != len(sources_ids.input_ids[0])):
+            raise Exception(f"number of tokens in source ({len(sources_ids.input_ids[0])}) are not the same as number of tokens in the base ({len(self.base_ids.input_ids[0])}). Source tokens: {sources_tokens}, Base tokens: {self.base_tokens}")
+        self.sources_ids, self.sources_tokens = [sources_ids], [sources_tokens] # for some reason the input needs to be a list
+        tokens = [self.tokenizer.encode(word) for word in output_to_measure] # tokenizer.encode returns list of token ids
 
         intervention_data = []
 
         for layer_i in tqdm(range(self.model.config.num_hidden_layers)): # looping over all hidden layers in model (every layer is an MLP?)
             config = self.simple_position_config("mlp_output", layer_i)
             intervenable = IntervenableModel(config, self.model)
-            for pos_i in range(len(base_tokenized.input_ids[0])): # looping over all the tokens in the base sentence
+            for pos_i in range(len(self.base_ids.input_ids[0])): # looping over all the tokens in the base sentence
                 _, counterfactual_outputs = intervenable( 
                     # counterfactual_outputs stores lots of things, amongst which hidden states of the base model with the mlp_output 
                     # at position i replaced with the mlp_output of source
-                    base_tokenized, sources_tokenized, {"sources->base": pos_i} #why can we pass in a list of sources??
+                    self.base_ids, self.sources_ids, {"sources->base": pos_i} #why can we pass in a list of sources??
                 )
                 counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # TODO: there must be a better way
                 distrib = embed_to_distrib(
@@ -130,9 +131,9 @@ class InterchangeIntervention:
 
             config = self.simple_position_config("attention_input", layer_i)
             intervenable = IntervenableModel(config, self.model)
-            for pos_i in range(len(base_tokenized.input_ids[0])):
+            for pos_i in range(len(self.base_ids.input_ids[0])):
                 _, counterfactual_outputs = intervenable(
-                    base_tokenized, sources_tokenized, {"sources->base": pos_i}
+                    self.base_ids, self.sources_ids, {"sources->base": pos_i}
                 )
                 counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1] # TODO: there must be a better way
                 distrib = embed_to_distrib(
@@ -159,15 +160,23 @@ class InterchangeIntervention:
         df.to_csv(filepath+".csv")
         return df
 
+    def string_to_token_ids_and_tokens(self, s: str):
+        # token ids's are the numbers, tokens are the text pieces
+        token_ids = self.tokenizer(s, return_tensors="pt").to(self.device)
+        """
+        note: this^ returns more than just token_ids, also info about attention masks
+        e.g:
+        {
+            'input_ids': tensor([[1437, 318, 12696, 2952, 30]]), 
+            'attention_mask': tensor([[1, 1, 1, 1, 1]])
+        }
+        """
+        tokens = self.tokenizer.convert_ids_to_tokens(token_ids['input_ids'][0])
+        print(f"{len(tokens)} tokens in '{s}': {tokens}")
+        return token_ids, tokens
+
+
     def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
-        base_token_pieces = []
-        
-        for word in base.split(" "): # TODO: there must be a way to do this without for loop
-            token_ids = self.tokenizer(word, add_special_tokens=False)["input_ids"] 
-            token_pieces = self.tokenizer.convert_ids_to_tokens(token_ids) 
-            base_token_pieces += token_pieces
-
-
         df["layer"] = df["layer"].astype("category")
         df["token"] = df["token"].astype("category")
         nodes = []
@@ -176,7 +185,8 @@ class InterchangeIntervention:
             nodes.append(f"a{l}")
         df["layer"] = pd.Categorical(df["layer"], categories=nodes[::-1], ordered=True)
 
-        breaks, labels = list(range(len(base_token_pieces))), base_token_pieces
+        breaks, labels = list(range(len(self.base_tokens))), self.base_tokens
+        print(f"breaks: {breaks}, labels: {labels}")
         # Example:
         # labels: ['The', 'capital', 'of', 'Spain', 'is']
         # breaks: [0, 1, 2, 3, 4]
@@ -212,14 +222,6 @@ class InterchangeIntervention:
             print(f"cannot make bar plot for {layer_to_filter} because the model ({self.model_id}) only has {self.model.config.num_hidden_layers} layers")
         filtered = df[df["pos"] == layer_to_filter]
 
-        base_token_pieces = []
-        
-        for word in base.split(" "): # TODO: there must be a way to do this without for loop
-            token_ids = self.tokenizer(word, add_special_tokens=False)["input_ids"] 
-            token_pieces = self.tokenizer.convert_ids_to_tokens(token_ids) 
-            base_token_pieces += token_pieces
-
-
 
         plot_bar = (
             ggplot(filtered)
@@ -230,7 +232,7 @@ class InterchangeIntervention:
             + labs(
                 title=f"Base: {base}, Source: {sources}",
                 y=f"Probability Scale",
-                x=f"Restored layer ('{base_token_pieces[layer_to_filter]}') in {self.model_id}",
+                x=f"Restored layer ('{self.base_tokens[layer_to_filter]}') in {self.model_id}",
                 fill="Probability Scale",
                 color="Probability Scale"
             )
@@ -265,17 +267,16 @@ def main():
     # base_prompt = "On a beautiful day in 1980 there" # sentence where part of residual stream will be replaced
     # source_prompts = ["On a beautiful day in 2020 there"] # sentence from which we take the replacement
     base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
-    source_prompts = ["In 2100 on a beautiful day there"] # sentence from which we take the replacement
+    source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
     interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
     #interchange_intervention = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # options: allenai/OLMo-1B-hf or gpt2
-    
-    output_to_measure = [" was", " will"]
+    output_to_measure = [" was", " will"] # Make sure to include space at the beginning!
     interchange_intervention.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
         interchange_intervention.factual_recall(prompt=s_p)
     results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    #interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
+    interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
 
 if __name__ == "__main__":
     main()
