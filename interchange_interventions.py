@@ -74,7 +74,11 @@ class InterchangeIntervention:
         inputs = [
             self.tokenizer(prompt, return_tensors="pt").to(self.device),
         ]
-        res = self.model.model(**inputs[0])  # use self.model.model to get the BASE output instead of the CAUSAL output
+        if self.model_id == "allenai/OLMo-1B-hf":
+            res = self.model.model(**inputs[0]) 
+        else:
+            # assuming this is gpt2
+            res = self.model(**inputs[0]) 
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
@@ -258,16 +262,20 @@ def main():
 
     # time inputs
     # TODO: what if base and source prompts don't have the same amount of tokens?
-    base_prompt = "On a beautiful day in 1980 there" # sentence where part of residual stream will be replaced
-    source_prompts = ["On a beautiful day in 2020 there"] # sentence from which we take the replacement
+    # base_prompt = "On a beautiful day in 1980 there" # sentence where part of residual stream will be replaced
+    # source_prompts = ["On a beautiful day in 2020 there"] # sentence from which we take the replacement
+    base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
+    source_prompts = ["In 2100 on a beautiful day there"] # sentence from which we take the replacement
     interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
-    output_to_measure = [" was", " is"]
+    #interchange_intervention = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # options: allenai/OLMo-1B-hf or gpt2
+    
+    output_to_measure = [" was", " will"]
     interchange_intervention.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
         interchange_intervention.factual_recall(prompt=s_p)
     results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=5)
+    #interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
 
 if __name__ == "__main__":
     main()
