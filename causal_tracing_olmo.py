@@ -137,10 +137,8 @@ class CausalTracer:
         print("FACTUAL RECALL:")
         print(prompt.prompt)
 
-        inputs = [
-            self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device),
-        ]
-        res = self.model.model(**inputs[0])  # use self.model.model to get the BASE output instead of the CAUSAL output
+        inputs, _ = self.string_to_token_ids_and_tokens(prompt.prompt)
+        res = self.model.model(**inputs)  # use self.model.model to get the BASE output instead of the CAUSAL output
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
@@ -184,7 +182,7 @@ class CausalTracer:
         base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
         print("\nDEBUG base: " + str(base))
 
-        for i in range(len(prompt.list_of_soln)):
+        for i in range(len(prompt.list_of_soln)): # pylint: disable=consider-using-enumerate
             solns = prompt.list_of_soln[i]
             print("\ntense:  " + str(solns))
             if run_type=="relative":
