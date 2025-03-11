@@ -1,3 +1,9 @@
+# aditi todo :)
+# summer/elmsville on II
+# clean up code
+# add gpt support
+
+
 # https://stanfordnlp.github.io/pyvene/tutorials/advanced_tutorials/Causal_Tracing.html
 
 import os
@@ -69,6 +75,8 @@ colors={
 } 
 
 
+
+
 class CausalTracer:
     def __init__(self, model_id, folder_path="pyvene_data_ct_olmo", device=None):
         self.model_id = model_id
@@ -109,7 +117,8 @@ class CausalTracer:
                 
         print("\nPROMPT OBJ\n" + str(prompt_obj))
         self.prompts.append(prompt_obj)
-        
+
+
     def get_prompts(self):
         return self.prompts
 
@@ -289,6 +298,8 @@ class CausalTracer:
         )
         print(plot)
 
+
+
 def restore_corrupted_with_interval_config(
     layer, device, dim_corrupted_tokens, stream="mlp_activation", window=10, num_layers=48):
 
@@ -339,68 +350,86 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
     def __str__(self):
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
 
+
+# aditi's mini-experiment to see whether the year affects the output, or if there's something else at play here...
+def add_prompts_for_experimental_runs(tracer: CausalTracer):
+    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
+    #                           list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)         # this is our usual "there" test
+    # tracer.add_prompt(prompt="Before 1980 there", dim_corrupted_words=2, 
+    #                     list_of_soln=TENSES, descriptive_label="ctrl_before_there", year=1980)          # this tests if its relative to 1980 -- what happens now?
+    # tracer.add_prompt(prompt="After 1980 there", dim_corrupted_words=2, 
+    #                     list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)          # parallels before
+    # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
+    #                           list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)     # slighty longer prompt for 1980
+    # tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
+    # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+    tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+                                list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)     # slighty longer prompt after 1980
+    tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
+                            list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
+    tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
+                            list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+
+
+
+
+def add_prompts_over_years(tracer: CausalTracer, years=YEARS, prompts=PROMPTS, tenses=TENSES):
+    # used to generate lots of graphs
+    for y in years:
+        for (prompt_template, num_words_to_corrupt, descr) in prompts:
+            prompt_real = prompt_template[:prompt_template.find("[[")] + str(y) + prompt_template[prompt_template.find("]]")+2:]
+            descr_label = str(y) + "_" + descr 
+            # dim_corrupted_words is observed to usually be len_words_prompt-1 because the year is usually the 2nd to last word
+            tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words_to_corrupt, 
+                            list_of_soln=tenses, descriptive_label=descr_label, year=y)
+
+
+
+########################################################################################################################
+
+### defs for prompts
+
+# create all the prompts we wanna use
+YEARS = [1980, 2000, 2020, 2050] 
+# PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
+# NOTE!! no commas allowed in prompts. it breaks sometimes.
+PROMPTS = [("In [[YEAR]] on a beautiful day there", 6, "beautiful_bkw"), 
+           ("On a beautiful day in [[YEAR]] there", 6, "beautiful")
+           ("On a gloomy day in [[YEAR]] there", 6, "gloomy"), ("On a rainy day in [[YEAR]] there", 6, "rainy"), 
+           ("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof")]
+            # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
+TENSES = [[" was", " were"], [" will"], [" is", " are"]]
+    # should i also include "was" and "were" without the space??
+
+
 def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
 
-
-    # create all the prompts we wanna use
-    YEARS = [1980, 2000, 2020, 2050] 
-    # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
-    # NOTE!! no commas allowed in prompts. it breaks sometimes.
-    PROMPTS = [#("On a gloomy day in [[YEAR]] there", 6, "gloomy"), ("On a rainy day in [[YEAR]] there", 6, "rainy"), 
-                ("In [[YEAR]] on a beautiful day there", 6, "beautiful_bkw")]
-                # ("On a beautiful day in [[YEAR]] there", 6, "beautiful")]
-               #("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof")]
-                # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
-    TENSES = [[" was", " were"], [" will"], [" is", " are"]]
-        # should i also include "was" and "were" without the space??
+    
+    # DO THIS: set the appropriate test
+    add_prompts_for_experimental_runs(tracer)
+    # add_prompts_over_years(tracer)  # adds a lot of prompts -- loops over years and prompt structures
 
 
-    if (0):
-        # aditi's mini-experiment to see whether the year affects the output, or if there's something else at play here...
-        # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
-        #                           list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)         # this is our usual "there" test
-        # tracer.add_prompt(prompt="Before 1980 there", dim_corrupted_words=2, 
-        #                     list_of_soln=TENSES, descriptive_label="ctrl_before_there", year=1980)          # this tests if its relative to 1980 -- what happens now?
-        # tracer.add_prompt(prompt="After 1980 there", dim_corrupted_words=2, 
-        #                     list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)          # parallels before
-        # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
-        #                           list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)     # slighty longer prompt for 1980
-        # tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
-        #                         list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
-        # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
-        #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
-
-        tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
-                                  list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)     # slighty longer prompt after 1980
-        tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
-                                list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
-        tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
-                                list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
-
-
-    if(1):
-        # used to generate lots of graphs
-        for y in YEARS:
-            for (prompt_template, num_words_to_corrupt, descr) in PROMPTS:
-                prompt_real = prompt_template[:prompt_template.find("[[")] + str(y) + prompt_template[prompt_template.find("]]")+2:]
-                descr_label = str(y) + "_" + descr 
-                # dim_corrupted_words is observed to usually be len_words_prompt-1 because the year is usually the 2nd to last word
-                tracer.add_prompt(prompt=prompt_real, dim_corrupted_words=num_words_to_corrupt, 
-                                list_of_soln=TENSES, descriptive_label=descr_label, year=y)
+    # DO THIS: set relative to true if you want the relative plots
+    relative = False  
 
 
     # loop over every prompt to run pyvene
     for p in tracer.get_prompts():
 
-        tracer.factual_recall(prompt=p)  # part 1
-        tracer.corrupted_run(prompt=p)   # part 2
+        # part 1        
+        # tracer.factual_recall(prompt=p)  
+        
+        # part 2
+        # tracer.corrupted_run(prompt=p)   
 
-        relative = False   # looks better than commenting out a bunch of code
-
+        # part 3: regular run over all tenses
         if (not relative):
-            tracer.restore_run(prompt=p, timestamp=timestamp)  # part 3: regular run over all tenses
+            tracer.restore_run(prompt=p, timestamp=timestamp)
 
         if (relative):
             # relative runs:
