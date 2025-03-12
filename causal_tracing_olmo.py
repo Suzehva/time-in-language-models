@@ -379,10 +379,10 @@ def add_prompts_for_experimental_runs(tracer: CausalTracer):
 YEARS = [1980, 2000, 2020, 2050] 
 # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
 # NOTE!! no commas allowed in prompts. it breaks sometimes.
-PROMPTS = [("In [[YEAR]] on a beautiful day there", 6, "beautiful_bkw")]# , 
-        #    ("On a beautiful day in [[YEAR]] there", 6, "beautiful"),
-        #    ("On a gloomy day in [[YEAR]] there", 6, "gloomy"), ("On a rainy day in [[YEAR]] there", 6, "rainy"), 
-        #    ("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof")]
+PROMPTS = [("In [[YEAR]] on a beautiful day there", 6, "beautiful_bkw"), 
+           ("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof"),
+            ("On a beautiful day in [[YEAR]] there", 6, "beautiful"),
+           ("In [[YEAR]] on a gloomy day there", 6, "gloomy"), ("In [[YEAR]] on a rainy day here", 6, "rainy")]
             # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
 TENSES = [[" was", " were"], [" will"], [" is", " are"]]
     # should i also include "was" and "were" without the space??
@@ -400,6 +400,15 @@ def add_prompts_over_years(tracer: CausalTracer, years=YEARS, prompts=PROMPTS, t
 
 
 
+
+def relative_2020_beautiful(tracer: CausalTracer):
+    prompt="In 2020 on a beautiful day there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=2, 
+                            list_of_soln=TENSES, descriptive_label="2020_beautiful_day", year=2020)
+    # NOTES: make sure to set it to relative in main
+    # also set the correct relative_prompt_focus term (is vs will) in the restore_run call
+
+
 ########################################################################################################################
 
 
@@ -413,8 +422,11 @@ def main():
     add_prompts_over_years(tracer)  # adds a lot of prompts -- loops over years and prompt structures
 
 
+    # for the single relative generated graph
+    # relative_2020_beautiful(tracer)
+
     # DO THIS: set relative to true if you want the relative plots
-    relative = False  
+    relative = False
 
 
     # loop over every prompt to run pyvene

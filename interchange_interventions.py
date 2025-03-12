@@ -316,6 +316,7 @@ class InterchangeIntervention:
 def main():
     base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
     source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
+    # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo/aditi_generated_mar_12") # aditi's code
     interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
     #interchange_intervention = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # for if you want to use gpt
     output_to_measure = [" was", " will"] # Make sure to include space at the beginning!

@@ -11,3 +11,5 @@ what the folders titles/etc mean:
 "tense of the year" -- makes sense for relative -- the relative tense is wrt the tense of the year (2005-2025 is considered "present"=is/are)
 
 "beautiful" -- refers to the prompt: "in 1980 on a beautiful day there __"
+
+
