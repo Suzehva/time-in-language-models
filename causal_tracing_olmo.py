@@ -1,6 +1,5 @@
 # aditi todo :)
 # summer/elmsville on II
-# clean up code
 # add gpt support
 
 
@@ -423,7 +422,7 @@ def main():
 
         # part 1        
         # tracer.factual_recall(prompt=p)  
-        
+
         # part 2
         # tracer.corrupted_run(prompt=p)   
 
