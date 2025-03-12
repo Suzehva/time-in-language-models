@@ -293,7 +293,7 @@ class CausalTracer:
         )
 
         ggsave(
-            plot, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
+            plot, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
         print(plot)
 
@@ -379,10 +379,10 @@ def add_prompts_for_experimental_runs(tracer: CausalTracer):
 YEARS = [1980, 2000, 2020, 2050] 
 # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
 # NOTE!! no commas allowed in prompts. it breaks sometimes.
-PROMPTS = [("In [[YEAR]] on a beautiful day there", 6, "beautiful_bkw"), 
-           ("On a beautiful day in [[YEAR]] there", 6, "beautiful")
-           ("On a gloomy day in [[YEAR]] there", 6, "gloomy"), ("On a rainy day in [[YEAR]] there", 6, "rainy"), 
-           ("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof")]
+PROMPTS = [("In [[YEAR]] on a beautiful day there", 6, "beautiful_bkw")]# , 
+        #    ("On a beautiful day in [[YEAR]] there", 6, "beautiful"),
+        #    ("On a gloomy day in [[YEAR]] there", 6, "gloomy"), ("On a rainy day in [[YEAR]] there", 6, "rainy"), 
+        #    ("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof")]
             # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
 TENSES = [[" was", " were"], [" will"], [" is", " are"]]
     # should i also include "was" and "were" without the space??
@@ -409,8 +409,8 @@ def main():
 
     
     # DO THIS: set the appropriate test
-    add_prompts_for_experimental_runs(tracer)
-    # add_prompts_over_years(tracer)  # adds a lot of prompts -- loops over years and prompt structures
+    # add_prompts_for_experimental_runs(tracer)
+    add_prompts_over_years(tracer)  # adds a lot of prompts -- loops over years and prompt structures
 
 
     # DO THIS: set relative to true if you want the relative plots

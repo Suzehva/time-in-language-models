@@ -156,7 +156,7 @@ class InterchangeIntervention:
         output_prob_text = '(' + ''.join([s.replace(' ', '_') for s in output_to_measure]) + ')'
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         filepath = "./"+self.folder_path+"/"+base_txt+output_prob_text+"_"+timestamp
-        print(f"saving interchange intervention data to {filepath}.pdf")
+        print(f"saving interchange intervention data to {filepath}.png")
         df_intervention_data.to_csv(filepath+".csv")
         df_output_intervention_data.to_csv(filepath+"_output.csv")
         return df_intervention_data, df_output_intervention_data
@@ -215,9 +215,9 @@ class InterchangeIntervention:
 
         timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
         filepath = "./"+self.folder_path+"/heat_"+base_txt+output_prob_text+"_"+timestamp
-        print(f"saving interchange intervention heatmap to {filepath}.pdf")
+        print(f"saving interchange intervention heatmap to {filepath}.png")
         ggsave(
-            plot_heat, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
+            plot_heat, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
 
     def text_heatmap_plot(self, output_df, base: str, sources: list[str]):
@@ -276,9 +276,9 @@ class InterchangeIntervention:
             )
         )
         
-        print(f"saving token text heatmap to {filepath}.pdf")
+        print(f"saving token text heatmap to {filepath}.png")
         ggsave(
-            plot_text, filename=filepath+".pdf", dpi=300, width=12, height=10
+            plot_text, filename=filepath+".png", dpi=300, width=12, height=10
         )
     
     
@@ -307,9 +307,9 @@ class InterchangeIntervention:
         base_txt = base.replace(' ', '_')
         output_prob_text = '(' + ''.join([s.replace(' ', '_') for s in output_to_measure]) + ')'
         filepath = "./"+self.folder_path+"/bar_"+base_txt+output_prob_text+"_"+timestamp
-        print(f"saving interchange intervention bar plot to {filepath}.pdf")
+        print(f"saving interchange intervention bar plot to {filepath}.png")
         ggsave(
-            plot_bar, filename=filepath+".pdf", dpi=200 # write pdf graph # TODO: how to save as png??
+            plot_bar, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
         
 
