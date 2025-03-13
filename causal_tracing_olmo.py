@@ -248,6 +248,7 @@ class CausalTracer:
 
                         # can sum over multiple words' tokens instead of just one
                         prob = sum(distrib[0][-1][token].detach().cpu().item() for token in tokens)
+
                         if (run_type == "relative"): # subtract away the other tense words
                             subt_words = [item for j, sublist in enumerate(prompt.list_of_soln) if j != i for item in sublist] # all items we're not interested in
                             subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
@@ -263,9 +264,9 @@ class CausalTracer:
                 df.to_csv(filepath+".csv") # write csv
 
                 self.plot(prompt, soln_txt, stream, filepath)
-                filepaths += filepath+".png"
+                filepaths.append(filepath+".png")
         
-        outputfilepath="combined_"+(prompt.prompt.replace(' ', '_'))+"_"+timestamp+".png"
+        outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+timestamp+".png"
         self.merge_images_horizontally(filepaths, outputfilepath)
 
     
@@ -310,6 +311,7 @@ class CausalTracer:
 
 
     def merge_images_horizontally(self, image_paths, output_path="merged.png"):
+        print(image_paths)
         images = [Image.open(img) for img in image_paths]  # Open images
         
         # Get total width and max height
@@ -326,11 +328,12 @@ class CausalTracer:
             x_offset += img.width
             img.close()
 
-        # Save merged image
-        merged_image.save(output_path)
-
         for img_path in image_paths:
             os.remove(img_path)  # Delete the individual img file
+            os.remove(img_path[:-4] + ".csv")
+
+        # Save merged image
+        merged_image.save(output_path)
 
 
 
