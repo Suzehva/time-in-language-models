@@ -46,8 +46,7 @@ from plotnine.scales import scale_x_continuous, scale_y_continuous
 from tqdm import tqdm
 
 # use this to control whether you compute and plot stuff besides the block output
-plot_only_block_outputs = True
-
+plot_only_block_outputs = False
 
 from dataclasses import dataclass
 
@@ -79,8 +78,6 @@ colors={
     "mlp_activation": "Greens",
     "attention_output": "Reds"
 } 
-
-
 
 
 class CausalTracer:
@@ -198,64 +195,67 @@ class CausalTracer:
         print(prompt.prompt)
 
         base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
-        print("\nDEBUG base: " + str(base))
 
         filepaths=[]
-        for i in range(len(prompt.list_of_soln)): # pylint: disable=consider-using-enumerate
-            solns = prompt.list_of_soln[i]
-            print("\ntense:  " + str(solns))
-            if run_type=="relative":
-                if relative_prompt_focus not in solns:
-                    print("skipped!")
-                    continue  # check if its relative, and continue if its a tense we dont care about
+        for stream in ["block_output", "mlp_activation", "attention_output"]:
+            filepaths=[] # reset filepaths for each stream
+            
+            # TODO REINSTATE
+            # if plot_only_block_outputs and stream != "block_output":    # only run block outputs
+            #     continue
+            # elif not plot_only_block_outputs and stream == "block_output":    # aditi edit to only plot the other 2. change back to !=
+            #     continue
+        
+            for i in range(len(prompt.list_of_soln)): # pylint: disable=consider-using-enumerate
+                solns = prompt.list_of_soln[i]
+                print("\ntense:  " + str(solns))
+                if run_type=="relative":
+                    if relative_prompt_focus not in solns:
+                        print("skipped!")
+                        continue  # check if its relative, and continue if its a tense we dont care about
              
-            tokens = [self.tokenizer.encode(soln)[0] for soln in solns]  # this provides same results as suze's tokenizer method
+                tokens = [self.tokenizer.encode(soln)[0] for soln in solns]  # this provides same results as suze's tokenizer method
 
-            for stream in ["block_output", "mlp_activation", "attention_output"]:
-                # don't plot anything besides block output if we dont want it
-                if plot_only_block_outputs and stream != "block_output":    # only run block outputs
-                    continue
-                elif not plot_only_block_outputs and stream == "block_output":    # aditi edit to only plot the other 2. change back to !=
-                    continue
-                
                 data = []
                 for layer_i in tqdm(range(self.model.config.num_hidden_layers)):
                     for pos_i in range(prompt.len_prompt_tokens):
-                        config = restore_corrupted_with_interval_config(
-                            layer=layer_i,
-                            device=self.device, 
-                            dim_corrupted_tokens=prompt.len_corrupted_tokens,
-                            stream=stream, 
-                            window=1 if stream == "block_output" else 10, 
-                            num_layers=self.model.config.num_hidden_layers,      
-                        )
-                        n_restores = len(config.representations) - 1
-                        intervenable = IntervenableModel(config, self.model)
+                        # config = restore_corrupted_with_interval_config(
+                        #     layer=layer_i,
+                        #     device=self.device, 
+                        #     dim_corrupted_tokens=prompt.len_corrupted_tokens,
+                        #     stream=stream, 
+                        #     window=1 if stream == "block_output" else 10, 
+                        #     num_layers=self.model.config.num_hidden_layers,      
+                        # )
+                        # n_restores = len(config.representations) - 1
+                        # intervenable = IntervenableModel(config, self.model)
 
-                        _, counterfactual_outputs = intervenable(
-                            base,
-                            [None] + [base]*n_restores,
-                            {
-                                "sources->base": (
-                                    [None] + [[[pos_i]]]*n_restores,
-                                    prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
-                                )
-                            },
-                        )
+                        # _, counterfactual_outputs = intervenable(
+                        #     base,
+                        #     [None] + [base]*n_restores,
+                        #     {
+                        #         "sources->base": (
+                        #             [None] + [[[pos_i]]]*n_restores,
+                        #             prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
+                        #         )
+                        #     },
+                        # )
 
-                        counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
-                        distrib = embed_to_distrib(
-                            self.model, counterfactual_outputs.last_hidden_state, logits=False
-                        )
+                        # counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
+                        # distrib = embed_to_distrib(
+                        #     self.model, counterfactual_outputs.last_hidden_state, logits=False
+                        # )
 
-                        # can sum over multiple words' tokens instead of just one
-                        prob = sum(distrib[0][-1][token].detach().cpu().item() for token in tokens)
+                        # # can sum over multiple words' tokens instead of just one
+                        # prob = sum(distrib[0][-1][token].detach().cpu().item() for token in tokens)
 
-                        if (run_type == "relative"): # subtract away the other tense words
-                            subt_words = [item for j, sublist in enumerate(prompt.list_of_soln) if j != i for item in sublist] # all items we're not interested in
-                            subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
-                            prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
-                            prob = prob - prob_subtr
+                        # if (run_type == "relative"): # subtract away the other tense words
+                        #     subt_words = [item for j, sublist in enumerate(prompt.list_of_soln) if j != i for item in sublist] # all items we're not interested in
+                        #     subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
+                        #     prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
+                        #     prob = prob - prob_subtr
+
+                        prob = 1
 
                         data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
                 df = pd.DataFrame(data) 
@@ -268,10 +268,11 @@ class CausalTracer:
                 self.plot(prompt, soln_txt, stream, filepath)
                 filepaths.append(filepath+".png")
         
-        outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+timestamp+".png"
-        self.merge_images_horizontally(filepaths, outputfilepath)
+            # merge images for every stream
+            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+timestamp+"_"+stream+".png"
+            self.merge_images_horizontally(filepaths, outputfilepath)
 
-    
+
     def plot(self, prompt: Prompt, soln_txt: str, stream: str, filepath:str):
         df = pd.read_csv(filepath+".csv")  # read csv
         df["layer"] = df["layer"].astype(int)
@@ -284,9 +285,16 @@ class CausalTracer:
         # change color based on stream
         hi_color = "purple"
         if(stream=="mlp_activation"):
-            hi_color="green"
+            hi_color="pink"  
         if(stream=="attention_output"):
-            hi_color="red"
+            hi_color="#C061A6"  # pink-purple midpoint
+
+    #   # change color based on stream
+    #     hi_color = "#00CCFF"    # blue
+    #     if(stream=="mlp_activation"):
+    #         hi_color="#006600"  # teal
+    #     if(stream=="attention_output"):
+    #         hi_color="#009980"  # green
 
         plot = (
             ggplot(df)
@@ -294,7 +302,8 @@ class CausalTracer:
             + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
             + theme(
                 figure_size=(4, 5),
-                axis_text_x=element_text(rotation=90)
+                axis_text_x=element_text(rotation=90),
+                plot_title=element_text(size=len(prompt.prompt)/2) # make sure title fits
             )
             + scale_x_continuous(
                 breaks=breaks,
@@ -306,7 +315,7 @@ class CausalTracer:
             )
             + labs(
                 title=f"{prompt.prompt}",
-                y=f"Restored layer in {self.model_id}",
+                y=f"Restored {stream} layer in {self.model_id}",
                 fill="p("+soln_txt+")",
             )
         )
@@ -320,8 +329,11 @@ class CausalTracer:
     def merge_images_horizontally(self, image_paths, output_path="merged.png"):
         images = [Image.open(img) for img in image_paths]  # Open images
         
+        for image in images:
+            print(image)
         # Get total width and max height
         total_width = sum(img.width for img in images)
+        print("did total width")
         max_height = max(img.height for img in images)
 
         # Create blank image
@@ -341,7 +353,6 @@ class CausalTracer:
 
         # Save merged image
         merged_image.save(output_path)
-
 
 
 def restore_corrupted_with_interval_config(
@@ -397,7 +408,7 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
 
 # aditi's mini-experiment to see whether the year affects the output, or if there's something else at play here...
 def add_prompts_for_experimental_runs(tracer: CausalTracer):
-    
+
     # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
     #                     list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)                 # this is our usual "there" test
     # tracer.add_prompt(prompt="Before 1980 there", dim_corrupted_words=2, 
@@ -412,13 +423,15 @@ def add_prompts_for_experimental_runs(tracer: CausalTracer):
     # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
     
-    # tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)       # slighty longer prompt after 1980
+    # Usually run these three
+    tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+                            list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)       # slighty longer prompt after 1980
     # tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
     # tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
     
+    # more years of the above
     # tracer.add_prompt(prompt="In 2020 on a beautiful day there", dim_corrupted_words=2, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020", year=2020)   
     # tracer.add_prompt(prompt="2020 on a beautiful day there", dim_corrupted_words=2, 
@@ -431,6 +444,7 @@ def add_prompts_for_experimental_runs(tracer: CausalTracer):
     # tracer.add_prompt(prompt="In 2000 on a beautiful day there", dim_corrupted_words=2, 
     #                     list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2000", year=2000)
 
+    # relative time attempt
     # tracer.add_prompt(prompt="Thirty years before 2060 on a beautiful day there", dim_corrupted_words=2, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_30_2060_beautiful", year=2030)   
     # tracer.add_prompt(prompt="Thirty years before 2020 on a beautiful day there", dim_corrupted_words=2, 
@@ -441,9 +455,18 @@ def add_prompts_for_experimental_runs(tracer: CausalTracer):
     # like task 1d
     # tracer.add_prompt(prompt="The year is 1950, and Wi-Fi", dim_corrupted_words=4, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_1950_descr_wifi", year=1950)   
+    # tracer.add_prompt(prompt="The year is 2020, and Wi-Fi", dim_corrupted_words=4, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_2020_descr_wifi", year=2020)   
+    # tracer.add_prompt(prompt="The year is 1950, and COVID", dim_corrupted_words=4, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_1950_descr_covid", year=1950)   
+    # tracer.add_prompt(prompt="The year is 2020, and COVID", dim_corrupted_words=4, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_2020_descr_covid", year=2020)   
 
-    tracer.add_prompt(prompt="The year is 2020, and Wi-Fi", dim_corrupted_words=4, 
-                            list_of_soln=TENSES, descriptive_label="ctrl_2020_descr_wifi", year=2020)   
+    # other relative misc
+    # tracer.add_prompt(prompt="Tomorrow on a beautiful day there", dim_corrupted_words=1, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_tmr", year=2025)
+
+   
 
 
 ### defs for prompts
