@@ -101,11 +101,12 @@ class CausalTracer:
         self.prompts = []
         self.folder_path = folder_path
 
-    def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, year: int):
+    def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, year=2000):
         # TODO might need to take care of choosing the corrupted tokens manually...
         # if (prompt[-1] != " "):
         #     prompt+=" " # in case the user did not add a space at the end of the prompt. not adding a space messes up the prompt list calculation below.
-        
+        # only need a year for relative stuff
+
         _, prompt_tokens = self.string_to_token_ids_and_tokens(prompt)
         len_prompt_tokens = len(prompt_tokens)
 
@@ -298,7 +299,7 @@ class CausalTracer:
                 self.plot(prompt, soln_txt, stream, filepath)
                 filepaths.append(filepath+".png")
         
-            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+timestamp+"_"+stream+".png"
+            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+self.model_id+"_"+stream+timestamp+"_"+".png"
             self.merge_images_horizontally(filepaths, outputfilepath)
 
 
@@ -426,80 +427,57 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
 
 
-# aditi's mini-experiment to see whether the year affects the output, or if there's something else at play here...
-def add_prompts_for_experimental_runs(tracer: CausalTracer):
-    
-    plot_only_block_outputs = True
+def add_prompts_for_beautiful_day(tracer: CausalTracer):
+    tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_1980")  
+    tracer.add_prompt(prompt="In 2000 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2000")  
+    tracer.add_prompt(prompt="In 2020 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2020")  
+    tracer.add_prompt(prompt="In 2030 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2030")   
+    tracer.add_prompt(prompt="In 2050 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2050")
+    tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_elmsville")   
+    tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_summer")   
 
-    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
-    #                     list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)                 # this is our usual "there" test
-    # tracer.add_prompt(prompt="Before 1980 there", dim_corrupted_words=2, 
-    #                     list_of_soln=TENSES, descriptive_label="ctrl_before_there", year=1980)          # this tests if its relative to 1980 -- what happens now?
-    # tracer.add_prompt(prompt="After 1980 there", dim_corrupted_words=2, 
-    #                     list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)           # parallels before
-    
-    # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)       # slighty longer prompt for 1980
-    # tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
-    # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
-    
-    # Usually run these three
-    # tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)       # slighty longer prompt after 1980
-    # tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
-    # tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
-    
-    # more years of the above
-    # tracer.add_prompt(prompt="In 2020 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020", year=2020)   
-    # tracer.add_prompt(prompt="2020 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020_NO_IN", year=2020)    
-    # tracer.add_prompt(prompt="In 2030 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2030", year=2030)    
+
+def add_prompts_for_1980(tracer: CausalTracer):
+    tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="1980_there")   
+    tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")       # slighty longer prompt for 1980
+
+
+def add_prompts_for_relative(tracer: CausalTracer):
+    tracer.add_prompt(prompt="Tomorrow on a beautiful day there", dim_corrupted_words=1, 
+                        list_of_soln=TENSES, descriptive_label="beautiful_tmr")
+    tracer.add_prompt(prompt="In just three hours on a beautiful day there", dim_corrupted_words=4, 
+                        list_of_soln=TENSES, descriptive_label="beautiful_just_three_hours")
  
-    # tracer.add_prompt(prompt="In 2050 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2050", year=2050)   
-    # tracer.add_prompt(prompt="In 2000 on a beautiful day there", dim_corrupted_words=2, 
-    #                     list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2000", year=2000)
-
-    # relative time attempt
-    # tracer.add_prompt(prompt="Thirty years before 2060 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_30_2060_beautiful", year=2030)   
-    # tracer.add_prompt(prompt="Thirty years before 2020 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_30_2020_beautiful", year=1990)   
-    # tracer.add_prompt(prompt="Thirty years before 1980 on a beautiful day there", dim_corrupted_words=2, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_30_1980_beautiful", year=1950)   
-
-    # like task 1d -- objects in relative time
-    tracer.add_prompt(prompt="The year is 1920, and COVID", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_1920_descr_covid", year=1920)  
-    tracer.add_prompt(prompt="The year is 1920, and WiFi", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_1920_descr_wifi", year=1920)   
-    tracer.add_prompt(prompt="The year is 1920, and planes", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_1920_descr_planes", year=1920)  
+def add_prompts_for_task1d(tracer: CausalTracer):
     tracer.add_prompt(prompt="The year is 1980, and COVID", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_1980_descr_covid", year=1980)  
+                        list_of_soln=TENSES, descriptive_label="1980_descr_covid")  
     tracer.add_prompt(prompt="The year is 1980, and WiFi", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_1980_descr_wifi", year=1980)   
+                        list_of_soln=TENSES, descriptive_label="1980_descr_wifi")   
     tracer.add_prompt(prompt="The year is 1980, and planes", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_1980_descr_planes", year=1980)  
+                        list_of_soln=TENSES, descriptive_label="1980_descr_planes")  
     tracer.add_prompt(prompt="The year is 2030, and COVID", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_2030_descr_covid", year=2030)  
+                        list_of_soln=TENSES, descriptive_label="2030_descr_covid")  
     tracer.add_prompt(prompt="The year is 2030, and WiFi", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_2030_descr_wifi", year=2030)   
+                        list_of_soln=TENSES, descriptive_label="2030_descr_wifi")   
     tracer.add_prompt(prompt="The year is 2030, and planes", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="ctrl_2030_descr_planes", year=2030)  
-
-    # other relative misc
-    # tracer.add_prompt(prompt="Tomorrow on a beautiful day there", dim_corrupted_words=1, 
-    #                         list_of_soln=TENSES, descriptive_label="ctrl_tmr", year=2025)
-
-   
-
+                        list_of_soln=TENSES, descriptive_label="2030_descr_planes")  
+    
+def add_prompts_for_thirty_years_before(tracer: CausalTracer):
+    tracer.add_prompt(prompt="Thirty years before 2060 on a beautiful day there", dim_corrupted_words=4, 
+                            list_of_soln=TENSES, descriptive_label="30_2060_beautiful")   
+    tracer.add_prompt(prompt="Thirty years before 2020 on a beautiful day there", dim_corrupted_words=4, 
+                            list_of_soln=TENSES, descriptive_label="30_2020_beautiful")   
+    tracer.add_prompt(prompt="Thirty years before 1980 on a beautiful day there", dim_corrupted_words=4, 
+                            list_of_soln=TENSES, descriptive_label="30_1980_beautiful")  
 
 ### defs for prompts
 
@@ -542,17 +520,22 @@ def relative_2020_beautiful(tracer: CausalTracer):
 
 def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    models = ["allenai/OLMo-1B-hf", "meta-llama/Llama-3.2-1B"]
-    for model in models:
-        tracer = CausalTracer(model_id=model, folder_path="pyvene_data_ct_olmo")  # can also pass an arg specifying the folder 
-        # tracer = CausalTracer(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_ct_llama")  # this is for llama
+    models = [("allenai/OLMo-1B-hf", "pyvene_causal_tracing_olmo"), ("meta-llama/Llama-3.2-1B", "pyvene_causal_tracing_llama")]
+    for model, folder in models:
+        tracer = CausalTracer(model_id=model, folder_path=folder)  # can also pass an arg specifying the folder 
         
         # DO THIS: set the appropriate test
-        add_prompts_for_experimental_runs(tracer)
+        
+        # add_prompts_for_beautiful_day(tracer)
+        # add_prompts_for_1980(tracer)
+        add_prompts_for_relative(tracer)
+        add_prompts_for_task1d(tracer)
+        add_prompts_for_thirty_years_before(tracer)
 
-        # DO THIS: set relative to true if you want the relative plots
-        relative = False
-        # DO THIS: use this to control whether you compute and plot stuff besides the block output
+        # # set this for relative plots
+        # relative=False
+        
+        # DO THIS: use this to control whether you plot only residuals vs mlp/attention
         plot_only_block_outputs = True
 
         # loop over every prompt to run pyvene
@@ -561,55 +544,7 @@ def main():
             # tracer.factual_recall(prompt=p)  
 
             # part 3: regular run over all tenses
-            if (not relative):
-                tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
-
-
-
-
-# def main():
-#     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-#     tracer = CausalTracer(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_ct_olmo")  # can also pass an arg specifying the folder 
-#     # tracer = CausalTracer(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_ct_llama")  # this is for llama
-
-    
-#     # DO THIS: set the appropriate test
-#     add_prompts_for_experimental_runs(tracer)
-#     # add_prompts_over_years(tracer)  # adds a lot of prompts -- loops over years and prompt structures
-
-#     # for the single relative generated graph
-#     # relative_2020_beautiful(tracer)
-
-#     # DO THIS: set relative to true if you want the relative plots
-#     relative = False
-
-#     # use this to control whether you compute and plot stuff besides the block output
-#     plot_only_block_outputs = True
-
-
-#     # loop over every prompt to run pyvene
-#     for p in tracer.get_prompts():
-
-#         # part 1        
-#         # tracer.factual_recall(prompt=p)  
-
-#         # part 2
-#         # tracer.corrupted_run(prompt=p)   
-
-#         # part 3: regular run over all tenses
-#         if (not relative):
-#             tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
-
-#         if (relative):
-#             # relative runs:
-#             # control which year we want to focus on for restore run. 
-#             relative_prompt_focus = " was" # past
-#             if p.year > 2005:
-#                 relative_prompt_focus=" is" # present
-#             if p.year > 2025:
-#                 relative_prompt_focus=" will" # future
-
-#             tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus, plot_only_block_outputs=plot_only_block_outputs)  # with subtraction
+            tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
 
 
 if __name__ == "__main__":

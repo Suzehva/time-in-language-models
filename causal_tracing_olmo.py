@@ -95,7 +95,7 @@ class CausalTracer:
         self.prompts = []
         self.folder_path = folder_path
 
-    def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, year: int):
+    def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, year=2000):
         # TODO might need to take care of choosing the corrupted tokens manually...
         # if (prompt[-1] != " "):
         #     prompt+=" " # in case the user did not add a space at the end of the prompt. not adding a space messes up the prompt list calculation below.
@@ -219,43 +219,41 @@ class CausalTracer:
                 data = []
                 for layer_i in tqdm(range(self.model.config.num_hidden_layers)):
                     for pos_i in range(prompt.len_prompt_tokens):
-                        # config = restore_corrupted_with_interval_config(
-                        #     layer=layer_i,
-                        #     device=self.device, 
-                        #     dim_corrupted_tokens=prompt.len_corrupted_tokens,
-                        #     stream=stream, 
-                        #     window=1 if stream == "block_output" else 10, 
-                        #     num_layers=self.model.config.num_hidden_layers,      
-                        # )
-                        # n_restores = len(config.representations) - 1
-                        # intervenable = IntervenableModel(config, self.model)
+                        config = restore_corrupted_with_interval_config(
+                            layer=layer_i,
+                            device=self.device, 
+                            dim_corrupted_tokens=prompt.len_corrupted_tokens,
+                            stream=stream, 
+                            window=1 if stream == "block_output" else 10, 
+                            num_layers=self.model.config.num_hidden_layers,      
+                        )
+                        n_restores = len(config.representations) - 1
+                        intervenable = IntervenableModel(config, self.model)
 
-                        # _, counterfactual_outputs = intervenable(
-                        #     base,
-                        #     [None] + [base]*n_restores,
-                        #     {
-                        #         "sources->base": (
-                        #             [None] + [[[pos_i]]]*n_restores,
-                        #             prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
-                        #         )
-                        #     },
-                        # )
+                        _, counterfactual_outputs = intervenable(
+                            base,
+                            [None] + [base]*n_restores,
+                            {
+                                "sources->base": (
+                                    [None] + [[[pos_i]]]*n_restores,
+                                    prompt.corrupted_tokens_indices + [[[pos_i]]]*n_restores,
+                                )
+                            },
+                        )
 
-                        # counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
-                        # distrib = embed_to_distrib(
-                        #     self.model, counterfactual_outputs.last_hidden_state, logits=False
-                        # )
+                        counterfactual_outputs.last_hidden_state = counterfactual_outputs.hidden_states[-1]
+                        distrib = embed_to_distrib(
+                            self.model, counterfactual_outputs.last_hidden_state, logits=False
+                        )
 
-                        # # can sum over multiple words' tokens instead of just one
-                        # prob = sum(distrib[0][-1][token].detach().cpu().item() for token in tokens)
+                        # can sum over multiple words' tokens instead of just one
+                        prob = sum(distrib[0][-1][token].detach().cpu().item() for token in tokens)
 
-                        # if (run_type == "relative"): # subtract away the other tense words
-                        #     subt_words = [item for j, sublist in enumerate(prompt.list_of_soln) if j != i for item in sublist] # all items we're not interested in
-                        #     subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
-                        #     prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
-                        #     prob = prob - prob_subtr
-
-                        prob = 1
+                        if (run_type == "relative"): # subtract away the other tense words
+                            subt_words = [item for j, sublist in enumerate(prompt.list_of_soln) if j != i for item in sublist] # all items we're not interested in
+                            subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
+                            prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
+                            prob = prob - prob_subtr
 
                         data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
                 df = pd.DataFrame(data) 
@@ -269,7 +267,7 @@ class CausalTracer:
                 filepaths.append(filepath+".png")
         
             # merge images for every stream
-            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+timestamp+"_"+stream+".png"
+            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+self.model_id+"_"+stream+"_"+timestamp+".png"
             self.merge_images_horizontally(filepaths, outputfilepath)
 
 
@@ -406,7 +404,42 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
 
 
-# aditi's mini-experiment to see whether the year affects the output, or if there's something else at play here...
+
+def add_prompts_for_beautiful_day(tracer: CausalTracer):
+    tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_1980")  
+    tracer.add_prompt(prompt="In 2000 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2000")  
+    tracer.add_prompt(prompt="In 2020 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2020")  
+    tracer.add_prompt(prompt="In 2030 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2030")   
+    tracer.add_prompt(prompt="In 2050 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2050")
+    tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_elmsville")   
+    tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_summer")   
+
+
+def add_prompts_for_1980(tracer: CausalTracer):
+    tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="1980_there")   
+    tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")       # slighty longer prompt for 1980
+
+
+def add_prompts_for_relative(tracer: CausalTracer):
+    tracer.add_prompt(prompt="In just three hours on a beautiful day", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="just_three_hours")       # slighty longer prompt for 1980
+    tracer.add_prompt(prompt="In just three hours on a beautiful day", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="just_three_hours")       # slighty longer prompt for 1980
+
+def add_prompts_for_task1d(tracer: CausalTracer):
+
+
+
+# aditi's combined list of mini-experiments to see whether the year affects the output, or if there's something else at play here...
 def add_prompts_for_experimental_runs(tracer: CausalTracer):
 
     # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
@@ -424,8 +457,8 @@ def add_prompts_for_experimental_runs(tracer: CausalTracer):
     #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
     
     # Usually run these three
-    tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
-                            list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)       # slighty longer prompt after 1980
+    # tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)       # slighty longer prompt after 1980
     # tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
     # tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
