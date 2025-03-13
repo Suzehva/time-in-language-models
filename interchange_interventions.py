@@ -138,7 +138,6 @@ class InterchangeIntervention:
                 distrib = embed_to_distrib(
                     self.model, counterfactual_outputs.last_hidden_state, logits=False
                 )
-                #print(distrib)
  
                 for token in tokens:
                     # if token is a list, it means the words we are measuring are getting split up into multiple tokens. 
@@ -208,23 +207,41 @@ class InterchangeIntervention:
 
     def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
         df["layer"] = df["layer"].astype(int)
-        df["token"] = df["token"].astype("category")
+        #df["token"] = df["token"].astype("category")
+        formatted_output_to_measure = [word.replace(" ", "_").replace("\n", "\\n") for word in output_to_measure] # based off of format_token funtion in basic_utils
+        df["token"] = pd.Categorical(
+            df["token"],
+            categories=formatted_output_to_measure,
+            ordered=True
+        )
+        #raise Exception(f"df[token]: {df["token"]}, edited version: {test}")
         breaks, labels = list(range(len(self.base_tokens))), self.base_tokens
         print(f"breaks: {breaks}, labels: {labels}")
         # Example:
         # labels: ['The', 'capital', 'of', 'Spain', 'is']
         # breaks: [0, 1, 2, 3, 4]
-        title_text = f"Base: {base}, Source: {sources}"
+        
+
+        # change color based on component
+        hi_color = "#00CCFF"    # blue
+        if(self.component=="mlp_output"):
+            hi_color="#006600"  # teal
+        if(self.component=="attention_output"):
+            hi_color="#009980"  # green
+        
+        title_text = f"Base: {base}, Source: {sources[0]}"
+        y_text = f"Single {self.component} layer restored in {self.model_id}"
+
         plot_heat = (
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="prob"))
-            + facet_wrap("~token") # splits the graph into multiple graphs, one for each token
-            + scale_fill_gradient(low="white", high="green", limits=(0, 1))  # Fixes 0 to light, 1 to dark
-            #+ scale_fill_cmap("Purples") 
+            + facet_wrap("~token", ncol=len(output_to_measure)) # splits the graph into multiple graphs, one for each token
+            + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
 
             + theme(
                 axis_text_x=element_text(rotation=90),
-                plot_title=element_text(size=len(title_text)//8)  # Correct parameter for title font size
+                plot_title=element_text(size=len(title_text)//8),  # make sure title fits
+                axis_text_y=element_text(size=len(y_text)//8)
             )
             + scale_x_continuous(
                 breaks=breaks,
@@ -234,9 +251,10 @@ class InterchangeIntervention:
                 breaks=list(range(self.model.config.num_hidden_layers))
             )
             + labs(
-                title=title_text, # TODO
-                y=f"Restored {self.component} for layer in {self.model_id}",
-                fill="Probability Scale",
+                title=title_text, 
+                y=y_text,
+                x=" ",
+                fill="Probability",
             )
         )
         
@@ -247,7 +265,7 @@ class InterchangeIntervention:
         filepath = "./"+self.folder_path+"/heat_"+base_txt+output_prob_text+"_"+timestamp
         print(f"saving interchange intervention heatmap to {filepath}.png")
         ggsave(
-            plot_heat, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
+            plot_heat, filename=filepath+".png", dpi=200 
         )
 
     def text_heatmap_plot(self, output_df, base: str, sources: list[str]):
@@ -278,16 +296,26 @@ class InterchangeIntervention:
         # Merge the two dataframes to get both token and probability in one
         merged_data = pd.merge(text_data, prob_data, on=['layer', 'pos'])
         merged_data['pos'] = merged_data['pos'].astype(int)
+
+        # change color based on component
+        hi_color = "#00CCFF"    # blue
+        if(self.component=="mlp_output"):
+            hi_color="#006600"  # teal
+        if(self.component=="attention_output"):
+            hi_color="#009980"  # green
+        
+        title_text = f"Base: {base}, Source: {sources[0]}"
+        y_text = f"Single {self.component} layer restored in {self.model_id}"
         
         plot_text = (
             ggplot(merged_data)
             + geom_tile(aes(x="pos", y="layer", fill="prob"), color="white")
             + geom_text(aes(x="pos", y="layer", label="token"), size=8, color="black")
-            + scale_fill_gradient(low="white", high="green", limits=(0, 1))  # Fixes 0 to light, 1 to dark
-            #+ scale_fill_cmap("Purples") 
+            + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
             + theme(
                 axis_text_x=element_text(rotation=90),
-                plot_title=element_text(size=10),
+                axis_text_y=element_text(size=len(y_text)//6),
+                plot_title=element_text(size=len(title_text)//6), # make sure title fits,
                 panel_grid_major=element_line(color="white", size=0.5),
                 panel_grid_minor=element_line(color="white", size=0.25),
                 panel_background=element_rect(fill="white")
@@ -301,9 +329,9 @@ class InterchangeIntervention:
             )
             + labs(
                 title=f"Top Predicted Tokens - Base: {base}, Source: {sources}",
-                y=f"Layer in {self.model_id}",
-                x="Position",
-                fill="Token Probability"  # Correct legend title
+                y=y_text,
+                x=" ",
+                fill="Probability"  # Correct legend title
             )
         )
         
@@ -314,6 +342,7 @@ class InterchangeIntervention:
     
     
     def bar_plot(self, df, base: str, sources: list[str], output_to_measure: list[str], layer_to_filter: int):
+        # this function isn't used so i stopped updating it
         if layer_to_filter > self.model.config.num_hidden_layers:
             print(f"cannot make bar plot for {layer_to_filter} because the model ({self.model_id}) only has {self.model.config.num_hidden_layers} layers")
         filtered = df[df["pos"] == layer_to_filter]
@@ -325,7 +354,7 @@ class InterchangeIntervention:
                 axis_text_x=element_text(rotation=90), 
                 legend_position="none",
             )
-            + facet_wrap("~token", ncol=1)
+            + facet_wrap("~token", ncol=1) # ncol or nrow?
             + labs(
                 title=f"Base: {base}, Source: {sources}",
                 y=f"Probability Scale",
@@ -340,20 +369,8 @@ class InterchangeIntervention:
         filepath = "./"+self.folder_path+"/bar_"+base_txt+output_prob_text+"_"+timestamp
         print(f"saving interchange intervention bar plot to {filepath}.png")
         ggsave(
-            plot_bar, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
+            plot_bar, filename=filepath+".png", dpi=200 
         )
-    
-    def suze_plays(self):
-        output_to_measure = ["was", " was", "will", " will", "is", " is"]
-        for s in output_to_measure:
-            self.string_to_token_ids_and_tokens(s)
-        
-        
-        # tokens = [self.tokenizer.encode(word) for word in output_to_measure] # tokenizer.encode returns list of token ids
-        # print(f"tokens: {tokens}") 
-        # output_to_measure = [" was", " will", " is"]
-        # tokens = [self.tokenizer.encode(word) for word in output_to_measure] # tokenizer.encode returns list of token ids
-        # print(f"tokens: {tokens}")
 
 
 def fact_recall_meas():
@@ -409,12 +426,12 @@ def run_ii_experiment():
         ("In 2030 on a beautiful day there", ["In 2020 on a beautiful day there"]),
         ("In 2030 on a beautiful day there", ["In 2000 on a beautiful day there"]),
         ("In 2030 on a beautiful day there", ["In Elmsville on a beautiful day there"]),
-        ("In 1980 on a beautiful day there", ["In just three hours on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In just three hours on a beautiful day there"]),
         ("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
 
         # now reverse
         ("In 2050 on a beautiful day there", ["In 1980 on a beautiful day there"]),
-        ("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        #("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
         ("In 2020 on a beautiful day there", ["In 1980 on a beautiful day there"]),
         ("In 2000 on a beautiful day there", ["In 1980 on a beautiful day there"]),
         ("In just three hours on a beautiful day there", ["In 1980 on a beautiful day there"]),
@@ -425,7 +442,7 @@ def run_ii_experiment():
         ("In 2000 on a beautiful day there", ["In 2030 on a beautiful day there"]),
         ("In just three hours on a beautiful day there", ["In 2030 on a beautiful day there"]),
         ("In Elmsville on a beautiful day there", ["In 1980 on a beautiful day there"]),
-        ("In 1980 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        #("In 1980 on a beautiful day there", ["In 2030 on a beautiful day there"]),
     ]
 
     # working with sentences of 7 tokens
@@ -441,11 +458,11 @@ def run_ii_experiment():
         ("In 2030 on a beautiful day there", ["In 2020 on a beautiful day there"]),
         ("In 2030 on a beautiful day there", ["In 2000 on a beautiful day there"]),
         ("In 2030 on a beautiful day there", ["In summer on a beautiful day there"]),
-        ("In 1980 on a beautiful day there", ["Tomorrow on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["Tomorrow on a beautiful day there"]),
         ("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
 
         # now reverse
-        ("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        #("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
         ("In 2020 on a beautiful day there", ["In 1980 on a beautiful day there"]),
         ("In 2000 on a beautiful day there", ["In 1980 on a beautiful day there"]),
         ("In summer on a beautiful day there", ["In 1980 on a beautiful day there"]),
@@ -454,12 +471,11 @@ def run_ii_experiment():
         ("In 2020 on a beautiful day there", ["In 2030 on a beautiful day there"]),
         ("In 2000 on a beautiful day there", ["In 2030 on a beautiful day there"]),
         ("In summer on a beautiful day there", ["In 2030 on a beautiful day there"]),
-        ("In 1980 on a beautiful day there", ["In 2030 on a beautiful day there"]),
-        ("Tomorrow on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        #("In 1980 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("Tomorrow on a beautiful day there", ["In 2030 on a beautiful day there"]),
     ]
 
-    output_to_measure = [" was", " will", " is"] # Make sure to include space at the beginning!
-
+    output_to_measure = [" was", " is", " will"] # Make sure to include space at the beginning!
 
     # block_output
     ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground/olmo")
@@ -501,6 +517,25 @@ def run_ii_experiment():
         ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
 
+def test_plots():
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground/olmo")
+    base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
+    source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
+    output_to_measure = [" was", " is", " will"]
+    
+    
+    results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
+    ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+
+    results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="mlp_output") # options: attention_input, mlp_output, block_output
+    ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+
+
+    results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_output") # options: attention_input, mlp_output, block_output
+    ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
 def main():
     """
@@ -515,7 +550,7 @@ def main():
     ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
     base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
     source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
-    output_to_measure = [" was", " will", " is"] # Make sure to include space at the beginning!
+    output_to_measure = [" was", " is", " will"] # Make sure to include space at the beginning!
 
     ii_olmo.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
@@ -527,7 +562,8 @@ def main():
     """
 
     #fact_recall_meas()
-    run_ii_experiment()
+    #run_ii_experiment()
+    test_plots()
 
     # TODO: add it so folder gets added automatically instead of requiring user to pre-make it
     
