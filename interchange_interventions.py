@@ -533,8 +533,6 @@ def test_plots():
     ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-    
-
 def main():
     """
     3 options for models: llama, gpt2 or olmo
