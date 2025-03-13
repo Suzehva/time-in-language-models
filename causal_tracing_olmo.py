@@ -22,11 +22,14 @@ from pyvene import (
     create_olmo
 )
 
+from PIL import Image
+
 # TODO remove plotnine im not using
 from plotnine import (
     ggplot,
     geom_tile,
     aes,
+    scale_fill_gradient,
     theme,
     element_text,
     xlab, ylab, 
@@ -34,6 +37,10 @@ from plotnine import (
     facet_wrap,
     labs
 )
+
+import patchworklib as pw  # Import patchworklib for arranging plots
+
+# from plotnine.ggplot import plot_grid
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from plotnine.scales import scale_x_continuous, scale_y_continuous
 from tqdm import tqdm
@@ -193,6 +200,7 @@ class CausalTracer:
         base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
         print("\nDEBUG base: " + str(base))
 
+        filepaths=[]
         for i in range(len(prompt.list_of_soln)): # pylint: disable=consider-using-enumerate
             solns = prompt.list_of_soln[i]
             print("\ntense:  " + str(solns))
@@ -240,6 +248,7 @@ class CausalTracer:
 
                         # can sum over multiple words' tokens instead of just one
                         prob = sum(distrib[0][-1][token].detach().cpu().item() for token in tokens)
+
                         if (run_type == "relative"): # subtract away the other tense words
                             subt_words = [item for j, sublist in enumerate(prompt.list_of_soln) if j != i for item in sublist] # all items we're not interested in
                             subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
@@ -252,11 +261,15 @@ class CausalTracer:
                 os.makedirs(self.folder_path, exist_ok=True)
                 soln_txt = ''.join([s.replace(' ', ',') for s in solns])[1:]
                 filepath = "./"+self.folder_path+"/"+run_type+"_"+prompt.descriptive_label+"_"+soln_txt+"_"+stream+"_"+timestamp
-
                 df.to_csv(filepath+".csv") # write csv
-                self.plot(prompt, soln_txt, stream, filepath)
-    
 
+                self.plot(prompt, soln_txt, stream, filepath)
+                filepaths.append(filepath+".png")
+        
+        outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+timestamp+".png"
+        self.merge_images_horizontally(filepaths, outputfilepath)
+
+    
     def plot(self, prompt: Prompt, soln_txt: str, stream: str, filepath:str):
         df = pd.read_csv(filepath+".csv")  # read csv
         df["layer"] = df["layer"].astype(int)
@@ -271,7 +284,7 @@ class CausalTracer:
         plot = (
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="p("+soln_txt+")"))
-            + scale_fill_cmap(colors[stream]) 
+            + scale_fill_gradient(low="white", high="purple", limits=(0, 1))  # Fixes 0 to light, 1 to dark
             + theme(
                 figure_size=(4, 5),
                 axis_text_x=element_text(rotation=90)
@@ -289,13 +302,38 @@ class CausalTracer:
                 y=f"Restored layer in {self.model_id}",
                 fill="p("+soln_txt+")",
             )
-
         )
 
         ggsave(
             plot, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
         print(plot)
+
+
+    def merge_images_horizontally(self, image_paths, output_path="merged.png"):
+        print(image_paths)
+        images = [Image.open(img) for img in image_paths]  # Open images
+        
+        # Get total width and max height
+        total_width = sum(img.width for img in images)
+        max_height = max(img.height for img in images)
+
+        # Create blank image
+        merged_image = Image.new("RGBA", (total_width, max_height), (255, 255, 255, 0))
+
+        # Paste images side by side
+        x_offset = 0
+        for img in images:
+            merged_image.paste(img, (x_offset, 0))
+            x_offset += img.width
+            img.close()
+
+        for img_path in image_paths:
+            os.remove(img_path)  # Delete the individual img file
+            os.remove(img_path[:-4] + ".csv")
+
+        # Save merged image
+        merged_image.save(output_path)
 
 
 
@@ -370,7 +408,12 @@ def add_prompts_for_experimental_runs(tracer: CausalTracer):
                             list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
     tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
                             list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
-
+    # tracer.add_prompt(prompt="In 2020 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020", year=2020)   
+    # tracer.add_prompt(prompt="2020 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020_NO_IN", year=2020)    
+    # tracer.add_prompt(prompt="In 2030 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2030", year=2030)    
 
 
 ### defs for prompts
@@ -379,12 +422,12 @@ def add_prompts_for_experimental_runs(tracer: CausalTracer):
 YEARS = [1980, 2000, 2020, 2050] 
 # PROMPTS: prompt, dim words to corrupt, and a descriptive name for generated files
 # NOTE!! no commas allowed in prompts. it breaks sometimes.
-PROMPTS = [("In [[YEAR]] on a beautiful day there", 6, "beautiful_bkw"), 
+PROMPTS = [("In [[YEAR]] on a beautiful day there", 2, "beautiful_bkw"), 
            ("In [[YEAR]] there", 2, "there"), ("As of [[YEAR]] it", 3, "asof"),
             ("On a beautiful day in [[YEAR]] there", 6, "beautiful"),
-           ("In [[YEAR]] on a gloomy day there", 6, "gloomy"), ("In [[YEAR]] on a rainy day here", 6, "rainy")]
+           ("In [[YEAR]] on a gloomy day there", 2, "gloomy"), ("In [[YEAR]] on a rainy day here", 2, "rainy")]
             # ("In [[YEAR]] they ", 2, "they") --- BAD according to what it gets from factual recall and corrupted run steps. it tries to return \n ???
-TENSES = [[" was", " were"], [" will"], [" is", " are"]]
+TENSES = [[" was", " were"], [" is", " are"], [" will"]]
     # should i also include "was" and "were" without the space??
 
 
@@ -418,8 +461,8 @@ def main():
 
     
     # DO THIS: set the appropriate test
-    # add_prompts_for_experimental_runs(tracer)
-    add_prompts_over_years(tracer)  # adds a lot of prompts -- loops over years and prompt structures
+    add_prompts_for_experimental_runs(tracer)
+    # add_prompts_over_years(tracer)  # adds a lot of prompts -- loops over years and prompt structures
 
 
     # for the single relative generated graph

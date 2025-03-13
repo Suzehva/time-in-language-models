@@ -215,7 +215,7 @@ class InterchangeIntervention:
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="prob"))
             + facet_wrap("~token") # splits the graph into multiple graphs, one for each token
-            + scale_fill_cmap("Purples") 
+            + scale_fill_cmap("purple") 
 
             + theme(
                 axis_text_x=element_text(rotation=90),
@@ -278,7 +278,7 @@ class InterchangeIntervention:
             ggplot(merged_data)
             + geom_tile(aes(x="pos", y="layer", fill="prob"), color="white")
             + geom_text(aes(x="pos", y="layer", label="token"), size=8, color="black")
-            + scale_fill_cmap("Purples") 
+            + scale_fill_cmap("purple") 
             + theme(
                 axis_text_x=element_text(rotation=90),
                 plot_title=element_text(size=10),
