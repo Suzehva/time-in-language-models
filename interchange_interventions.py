@@ -138,7 +138,6 @@ class InterchangeIntervention:
                 distrib = embed_to_distrib(
                     self.model, counterfactual_outputs.last_hidden_state, logits=False
                 )
-                #print(distrib)
  
                 for token in tokens:
                     # if token is a list, it means the words we are measuring are getting split up into multiple tokens. 
@@ -221,7 +220,7 @@ class InterchangeIntervention:
         # Example:
         # labels: ['The', 'capital', 'of', 'Spain', 'is']
         # breaks: [0, 1, 2, 3, 4]
-        title_text = f"Base: {base}, Source: {sources}"
+        
 
         # change color based on component
         hi_color = "#00CCFF"    # blue
@@ -229,18 +228,20 @@ class InterchangeIntervention:
             hi_color="#006600"  # teal
         if(self.component=="attention_output"):
             hi_color="#009980"  # green
+        
+        title_text = f"Base: {base}, Source: {sources[0]}"
+        y_text = f"Single {self.component} layer restored in {self.model_id}"
 
         plot_heat = (
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="prob"))
-            #+ facet_wrap("~token") # splits the graph into multiple graphs, one for each token
-            + facet_wrap("~token", ncol=len(output_to_measure))
+            + facet_wrap("~token", ncol=len(output_to_measure)) # splits the graph into multiple graphs, one for each token
             + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
-            #+ scale_fill_cmap("Purples") 
 
             + theme(
                 axis_text_x=element_text(rotation=90),
-                plot_title=element_text(size=len(title_text)//8)  # make sure title fits
+                plot_title=element_text(size=len(title_text)//8),  # make sure title fits
+                axis_text_y=element_text(size=len(y_text)//8)
             )
             + scale_x_continuous(
                 breaks=breaks,
@@ -251,8 +252,9 @@ class InterchangeIntervention:
             )
             + labs(
                 title=title_text, 
-                y=f"Restored {self.component} for layer in {self.model_id}",
-                fill="Probability Scale",
+                y=y_text,
+                x=" ",
+                fill="Probability",
             )
         )
         
@@ -302,7 +304,8 @@ class InterchangeIntervention:
         if(self.component=="attention_output"):
             hi_color="#009980"  # green
         
-        title_text = f"Top Predicted Tokens - Base: {base}, Source: {sources}"
+        title_text = f"Base: {base}, Source: {sources[0]}"
+        y_text = f"Single {self.component} layer restored in {self.model_id}"
         
         plot_text = (
             ggplot(merged_data)
@@ -311,7 +314,8 @@ class InterchangeIntervention:
             + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
             + theme(
                 axis_text_x=element_text(rotation=90),
-                plot_title=element_text(size=len(title_text)//8), # make sure title fits,
+                axis_text_y=element_text(size=len(y_text)//6),
+                plot_title=element_text(size=len(title_text)//6), # make sure title fits,
                 panel_grid_major=element_line(color="white", size=0.5),
                 panel_grid_minor=element_line(color="white", size=0.25),
                 panel_background=element_rect(fill="white")
@@ -325,9 +329,9 @@ class InterchangeIntervention:
             )
             + labs(
                 title=f"Top Predicted Tokens - Base: {base}, Source: {sources}",
-                y=f"Layer in {self.model_id}",
-                x="Position",
-                fill="Token Probability"  # Correct legend title
+                y=y_text,
+                x=" ",
+                fill="Probability"  # Correct legend title
             )
         )
         
