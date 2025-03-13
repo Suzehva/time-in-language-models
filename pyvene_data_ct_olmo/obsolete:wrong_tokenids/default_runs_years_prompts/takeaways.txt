@@ -1,1 +1,0 @@
-These files are for use in comparing to the relative plots. This will help clairify which tense contributed to the relative calculation (aka the subrtaction) most significantly

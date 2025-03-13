@@ -1,8 +1,0 @@
-interesting outputs:
-
-2020 beautiful -- was/were has a highish probability of 5%
-2000 there -- high probablity almost everywhere that the next word is was/were
-
-All other plots demonstrate:
- - before 2000ish (inclusive), the probability of was/were is higher than is/are/will in the residuals towards the end of the layer in the year token
- - after 2020ish (inclusive), the probability of was/were goes down wrt is/are/will 
