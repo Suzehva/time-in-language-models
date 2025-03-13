@@ -279,8 +279,6 @@ class CausalTracer:
         custom_labels = prompt.custom_labels
         breaks = prompt.breaks
 
-        print(filepath)
-
         plot = (
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="p("+soln_txt+")"))
@@ -307,11 +305,10 @@ class CausalTracer:
         ggsave(
             plot, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
-        print(plot)
+        # print(plot)
 
 
     def merge_images_horizontally(self, image_paths, output_path="merged.png"):
-        print(image_paths)
         images = [Image.open(img) for img in image_paths]  # Open images
         
         # Get total width and max height
@@ -328,6 +325,7 @@ class CausalTracer:
             x_offset += img.width
             img.close()
 
+        # delete all the extra images and csv files
         for img_path in image_paths:
             os.remove(img_path)  # Delete the individual img file
             os.remove(img_path[:-4] + ".csv")
@@ -390,30 +388,40 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
 
 # aditi's mini-experiment to see whether the year affects the output, or if there's something else at play here...
 def add_prompts_for_experimental_runs(tracer: CausalTracer):
+    
     # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
-    #                           list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)         # this is our usual "there" test
+    #                     list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)                 # this is our usual "there" test
     # tracer.add_prompt(prompt="Before 1980 there", dim_corrupted_words=2, 
     #                     list_of_soln=TENSES, descriptive_label="ctrl_before_there", year=1980)          # this tests if its relative to 1980 -- what happens now?
     # tracer.add_prompt(prompt="After 1980 there", dim_corrupted_words=2, 
-    #                     list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)          # parallels before
+    #                     list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)           # parallels before
+    
     # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
-    #                           list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)     # slighty longer prompt for 1980
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)       # slighty longer prompt for 1980
     # tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
     # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
-    tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
-                                list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)     # slighty longer prompt after 1980
-    tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
-                            list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
-    tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
-                            list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+    
+    # tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)       # slighty longer prompt after 1980
+    # tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
+    # tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+    
     # tracer.add_prompt(prompt="In 2020 on a beautiful day there", dim_corrupted_words=2, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020", year=2020)   
     # tracer.add_prompt(prompt="2020 on a beautiful day there", dim_corrupted_words=2, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020_NO_IN", year=2020)    
     # tracer.add_prompt(prompt="In 2030 on a beautiful day there", dim_corrupted_words=2, 
     #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2030", year=2030)    
+ 
+    # tracer.add_prompt(prompt="In 2050 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2050", year=2050)   
+    tracer.add_prompt(prompt="In 2000 on a beautiful day there", dim_corrupted_words=2, 
+                        list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2000", year=2000)   
+   
 
 
 ### defs for prompts
