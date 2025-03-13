@@ -63,8 +63,16 @@ class InterchangeIntervention:
             self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) 
         elif self.model_id == "gpt2":
             self.config, self.tokenizer, self.model = create_gpt2()
+        elif self.model_id == "meta-llama/Llama-3.2-1B":
+            # bit hacky but oh well
+            from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+            # bit hacky
+            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, legacy=False)
+            self.config = AutoConfig.from_pretrained(self.model_id)
+            self.model = AutoModelForCausalLM.from_pretrained(self.model_id, torch_dtype=torch.bfloat16, device_map=self.device, config=self.config)
+            
         else:
-           os.error(f'only olmo, gpt2 is supported at this time') 
+           raise Exception(f'only olmo, gpt2, llama is supported at this time') 
         self.model.to(self.device)
 
         self.prompts = []
@@ -77,9 +85,14 @@ class InterchangeIntervention:
         inputs, _ = self.string_to_token_ids_and_tokens(prompt)
         if self.model_id == "allenai/OLMo-1B-hf":
             res = self.model.model(**inputs) # removed [0] from **inputs[0] because input is now not a list
+        elif self.model_id == "gpt2":
+            res = self.model(**inputs[0])
+        elif self.model_id == "meta-llama/Llama-3.2-1B":
+            res = self.model(**inputs, output_hidden_states=True) 
+            res.last_hidden_state = res.hidden_states[-1] #this seems to work
         else:
-            # assuming this is gpt2
-            res = self.model(**inputs[0]) 
+            raise Exception(f'only olmo, gpt2 is supported at this time') 
+
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
@@ -106,6 +119,7 @@ class InterchangeIntervention:
             raise Exception(f"number of tokens in source ({len(sources_ids.input_ids[0])}) are not the same as number of tokens in the base ({len(self.base_ids.input_ids[0])}). Source tokens: {sources_tokens}, Base tokens: {self.base_tokens}")
         self.sources_ids, self.sources_tokens = [sources_ids], [sources_tokens] # for some reason the input needs to be a list
         tokens = [self.tokenizer.encode(word) for word in output_to_measure] # tokenizer.encode returns list of token ids
+        #print(f"tokens: {tokens}") # for llama a=with input [" was", " will"], this prints tokens: [[128000, 574], [128000, 690]]. Olmo prints [[369], [588]]
 
         intervention_data = []
         output_intervention_data = []
@@ -123,15 +137,26 @@ class InterchangeIntervention:
                 distrib = embed_to_distrib(
                     self.model, counterfactual_outputs.last_hidden_state, logits=False
                 )
-                # if (layer_i == self.model.config.num_hidden_layers - 1) and (pos_i == len(self.base_ids.input_ids[0]) - 1):
-                #     # this is the last hidden state
-                #     self.output_token = top_vals(self.tokenizer, distrib[0][-1], n=1, return_results=True)
-                    
+                #print(distrib)
+ 
                 for token in tokens:
+                    # if token is a list, it means the words we are measuring are getting split up into multiple tokens. 
+                    # # To plot them, I just multiply their probabilities since we're dealing with conditional probability, 
+                    # TODO: should verify if that's okay
+                    #raise Exception(f"current token: {token}")
+                    if len(token) > 1:
+                        # this happens for llama
+                        prob = 1
+                        for t in token:
+                            prob *= float(distrib[0][-1][t])
+                    else:
+                        # this happens for gpt2, olmo
+                        prob = float(distrib[0][-1][token])
+
                     intervention_data.append(
                         {
                             "token": format_token(self.tokenizer, token), # this is an actual word piece
-                            "prob": float(distrib[0][-1][token]),
+                            "prob": prob,
                             "layer": layer_i,
                             "pos": pos_i,
                             "type": self.component,
@@ -317,8 +342,11 @@ def main():
     base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
     source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
     # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo/aditi_generated_mar_12") # aditi's code
-    interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
+    #interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
     #interchange_intervention = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # for if you want to use gpt
+    interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
+
+
     output_to_measure = [" was", " will"] # Make sure to include space at the beginning!
     interchange_intervention.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
