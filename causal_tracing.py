@@ -84,8 +84,10 @@ class CausalTracer:
         print(f'Using device: {self.device}')
         if self.model_id == "allenai/OLMo-1B-hf":
             self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) 
+            self.name = "olmo"
         elif self.model_id == "gpt2":
             self.config, self.tokenizer, self.model = create_gpt2()
+            self.name= "gpt2"
         elif self.model_id == "meta-llama/Llama-3.2-1B":
             # bit hacky but oh well
             from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
@@ -93,6 +95,7 @@ class CausalTracer:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, legacy=False)
             self.config = AutoConfig.from_pretrained(self.model_id)
             self.model = AutoModelForCausalLM.from_pretrained(self.model_id, torch_dtype=torch.bfloat16, device_map=self.device, config=self.config)
+            self.name = "llama"
             
         else:
            raise Exception(f'only olmo, gpt2, llama is supported at this time') 
@@ -296,10 +299,10 @@ class CausalTracer:
                 filepath = "./"+self.folder_path+"/"+run_type+"_"+prompt.descriptive_label+"_"+soln_txt+"_"+stream+"_"+timestamp
                 df.to_csv(filepath+".csv") # write csv
 
-                self.plot(prompt, soln_txt, stream, filepath)
+                self.plot(prompt, soln_txt, stream, filepath) # read csv to create a png
                 filepaths.append(filepath+".png")
         
-            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+self.model_id+"_"+stream+timestamp+"_"+".png"
+            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+self.name+"_"+stream+timestamp+"_"+".png"
             self.merge_images_horizontally(filepaths, outputfilepath)
 
 
@@ -319,14 +322,26 @@ class CausalTracer:
         if(stream=="attention_output"):
             hi_color="#C061A6"  # pink-purple midpoint
 
+
+        prompt_len=len(prompt.prompt)
+        font_size = 6
+        if prompt_len < 20:
+            font_size = 14
+        if prompt_len < 40:
+            font_size = 12
+        elif prompt_len < 60:
+            font_size = 10.5
+        elif prompt_len < 75:
+            font_size = 8
+
         plot = (
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="p("+soln_txt+")"))
             + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
             + theme(
                 figure_size=(4, 5),
-                axis_text_x=element_text(rotation=90),
-                plot_title=element_text(size=len(prompt.prompt)/2) # make sure title fits
+                axis_text_x=element_text(rotation=90, size=9.5),
+                plot_title=element_text(size=font_size), # make sure title fits
             )
             + scale_x_continuous(
                 breaks=breaks,
@@ -338,7 +353,7 @@ class CausalTracer:
             )
             + labs(
                 title=f"{prompt.prompt}",
-                y=f"Restored {stream} layer in {self.model_id}",
+                y=f"Restored {stream} layer in {self.name}",
                 fill="p("+soln_txt+")",
             )
         )
@@ -426,6 +441,14 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
     def __str__(self):
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
 
+def add_prompts_for_beautiful_day_mlp_attention(tracer: CausalTracer):
+    tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+            list_of_soln=TENSES, descriptive_label="beautiful_1980") 
+    tracer.add_prompt(prompt="In 2030 on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_2030")   
+    tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="beautiful_elmsville")   
+    
 
 def add_prompts_for_beautiful_day(tracer: CausalTracer):
     tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
@@ -448,8 +471,9 @@ def add_prompts_for_1980(tracer: CausalTracer):
     tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
                 list_of_soln=TENSES, descriptive_label="1980_there")   
     tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
-                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")       # slighty longer prompt for 1980
-
+                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")    
+    tracer.add_prompt(prompt="On a gloomy day in 1980 and there", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="gloomy_end_1980")   
 
 def add_prompts_for_relative(tracer: CausalTracer):
     tracer.add_prompt(prompt="Tomorrow on a beautiful day there", dim_corrupted_words=1, 
@@ -522,21 +546,35 @@ def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
     models = [("allenai/OLMo-1B-hf", "pyvene_causal_tracing/olmo"), ("meta-llama/Llama-3.2-1B", "pyvene_causal_tracing/llama")]
     for model, folder in models:
-        tracer = CausalTracer(model_id=model, folder_path=folder)  # can also pass an arg specifying the folder 
-        
+        tracer = CausalTracer(model_id=model, folder_path=folder) 
+        plot_only_block_outputs = True
+
+
         # DO THIS: set the appropriate test
+
+        # 1. running! relative + task1d
+        # add_prompts_for_relative(tracer)
+        # add_prompts_for_task1d(tracer)
         
+        # 2. running! beautiful_day
         # add_prompts_for_beautiful_day(tracer)
+
+        # 3. running! 1980
         # add_prompts_for_1980(tracer)
-        add_prompts_for_relative(tracer)
-        add_prompts_for_task1d(tracer)
-        add_prompts_for_thirty_years_before(tracer)
+
+        # 4. running! mlp-att
+        # plot_only_block_outputs = False
+        # add_prompts_for_beautiful_day_mlp_attention(tracer)
+
+        # add_prompts_for_thirty_years_before(tracer)
+
+
 
         # # set this for relative plots
         # relative=False
 
         # DO THIS: use this to control whether you plot only residuals vs mlp/attention
-        plot_only_block_outputs = True
+        # plot_only_block_outputs = True
 
         # loop over every prompt to run pyvene
         for p in tracer.get_prompts():
