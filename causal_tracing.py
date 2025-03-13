@@ -520,7 +520,7 @@ def relative_2020_beautiful(tracer: CausalTracer):
 
 def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    models = [("allenai/OLMo-1B-hf", "pyvene_causal_tracing_olmo"), ("meta-llama/Llama-3.2-1B", "pyvene_causal_tracing_llama")]
+    models = [("allenai/OLMo-1B-hf", "pyvene_causal_tracing/olmo"), ("meta-llama/Llama-3.2-1B", "pyvene_causal_tracing/llama")]
     for model, folder in models:
         tracer = CausalTracer(model_id=model, folder_path=folder)  # can also pass an arg specifying the folder 
         
@@ -534,7 +534,7 @@ def main():
 
         # # set this for relative plots
         # relative=False
-        
+
         # DO THIS: use this to control whether you plot only residuals vs mlp/attention
         plot_only_block_outputs = True
 
