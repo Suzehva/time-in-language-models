@@ -19,8 +19,7 @@ from pyvene import (
     IntervenableConfig,
     ConstantSourceIntervention,
     LocalistRepresentationIntervention,
-    create_olmo,
-    create_gpt2
+    create_olmo
 )
 
 from PIL import Image
@@ -45,6 +44,9 @@ import patchworklib as pw  # Import patchworklib for arranging plots
 from plotnine.scales import scale_y_reverse, scale_fill_cmap
 from plotnine.scales import scale_x_continuous, scale_y_continuous
 from tqdm import tqdm
+
+# use this to control whether you compute and plot stuff besides the block output
+plot_only_block_outputs = False
 
 from dataclasses import dataclass
 
@@ -71,34 +73,23 @@ titles={
     "mlp_activation": "center of interval of 10 patched mlp layer",
     "attention_output": "center of interval of 10 patched attn layer"
 }
-
-
+colors={
+    "block_output": "Purples",
+    "mlp_activation": "Greens",
+    "attention_output": "Reds"
+} 
 
 
 class CausalTracer:
     def __init__(self, model_id, folder_path="pyvene_data_ct_olmo", device=None):
         self.model_id = model_id
-        print(f"Running with model {self.model_id}")
         # Initialize the device (GPU or MPS [for apple silicon] or CPU)
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu" 
         print(f'Using device: {self.device}')
         if self.model_id == "allenai/OLMo-1B-hf":
             self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) 
-            self.name = "olmo"
-        elif self.model_id == "gpt2":
-            self.config, self.tokenizer, self.model = create_gpt2()
-            self.name= "gpt2"
-        elif self.model_id == "meta-llama/Llama-3.2-1B":
-            # bit hacky but oh well
-            from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
-            # bit hacky
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, legacy=False)
-            self.config = AutoConfig.from_pretrained(self.model_id)
-            self.model = AutoModelForCausalLM.from_pretrained(self.model_id, torch_dtype=torch.bfloat16, device_map=self.device, config=self.config)
-            self.name = "llama"
-            
         else:
-           raise Exception(f'only olmo, gpt2, llama is supported at this time') 
+           os.error(f'only olmo is supported at this time') 
         self.model.to(self.device)
 
         self.prompts = []
@@ -108,8 +99,7 @@ class CausalTracer:
         # TODO might need to take care of choosing the corrupted tokens manually...
         # if (prompt[-1] != " "):
         #     prompt+=" " # in case the user did not add a space at the end of the prompt. not adding a space messes up the prompt list calculation below.
-        # only need a year for relative stuff
-
+        
         _, prompt_tokens = self.string_to_token_ids_and_tokens(prompt)
         len_prompt_tokens = len(prompt_tokens)
 
@@ -157,23 +147,13 @@ class CausalTracer:
     
     def list_from_prompt(self, prompt: str):
         return prompt.split(" ")
-    
 
     def factual_recall(self, prompt: Prompt):
         print("FACTUAL RECALL:")
-        print(str(prompt.prompt))
+        print(prompt.prompt)
 
         inputs, _ = self.string_to_token_ids_and_tokens(prompt.prompt)
-        if self.model_id == "allenai/OLMo-1B-hf":
-            res = self.model.model(**inputs) # removed [0] from **inputs[0] because input is now not a list
-        elif self.model_id == "gpt2":
-            res = self.model(**inputs[0])
-        elif self.model_id == "meta-llama/Llama-3.2-1B":
-            res = self.model(**inputs, output_hidden_states=True) 
-            res.last_hidden_state = res.hidden_states[-1] #this seems to work
-        else:
-            raise Exception(f'only olmo, gpt2 is supported at this time') 
-
+        res = self.model.model(**inputs)  # use self.model.model to get the BASE output instead of the CAUSAL output
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
@@ -207,7 +187,7 @@ class CausalTracer:
         top_vals(self.tokenizer, distrib[0][-1], n=10)
         return base
 
-    def restore_run(self, prompt: Prompt, timestamp: str, run_type="default", relative_prompt_focus=" was", plot_only_block_outputs=True):
+    def restore_run(self, prompt: Prompt, timestamp: str, run_type="default", relative_prompt_focus=" was"):
         # @param base : use the base from the related corrupted_run
         # @param run_type : if "default", just do regular plots. if "relative", compute difference betweenn all other words in all possible solns
 
@@ -215,18 +195,16 @@ class CausalTracer:
         print(prompt.prompt)
 
         base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
-        print("\nDEBUG base: " + str(base))
 
         filepaths=[]
-
         for stream in ["block_output", "mlp_activation", "attention_output"]:
             filepaths=[] # reset filepaths for each stream
             
-            # don't plot anything besides block output if we dont want it
-            if plot_only_block_outputs and stream != "block_output":    # only run block outputs
-                continue
-            elif not plot_only_block_outputs and stream == "block_output":    # run non-block outputs (mlp and attention)
-                continue
+            # TODO REINSTATE
+            # if plot_only_block_outputs and stream != "block_output":    # only run block outputs
+            #     continue
+            # elif not plot_only_block_outputs and stream == "block_output":    # aditi edit to only plot the other 2. change back to !=
+            #     continue
         
             for i in range(len(prompt.list_of_soln)): # pylint: disable=consider-using-enumerate
                 solns = prompt.list_of_soln[i]
@@ -235,12 +213,9 @@ class CausalTracer:
                     if relative_prompt_focus not in solns:
                         print("skipped!")
                         continue  # check if its relative, and continue if its a tense we dont care about
-                
-                print("solutions: " + str(solns) +"\n")
-                tokens = [self.tokenizer.encode(soln) for soln in solns]  # this provides same results as suze's tokenizer method
-                # tokens = [self.tokenizer.encode(soln)[0] for soln in solns]  # this provides same results as suze's tokenizer method
-                print("\n\nin restore run, tokens is:\n" + str(tokens))
-                
+             
+                tokens = [self.tokenizer.encode(soln)[0] for soln in solns]  # this provides same results as suze's tokenizer method
+
                 data = []
                 for layer_i in tqdm(range(self.model.config.num_hidden_layers)):
                     for pos_i in range(prompt.len_prompt_tokens):
@@ -272,24 +247,13 @@ class CausalTracer:
                         )
 
                         # can sum over multiple words' tokens instead of just one
-                        prob = 0
-                        for token in tokens:
-                            if self.model_id == "meta-llama/Llama-3.2-1B" and len(token) == 2 and token[0] == 128000: # 128000 is <|begin_of_text|> token for llama which we want to ignore TODO don't hardcode this
-                                token = [token[1]]
-                                # raise Exception("LLAMA TOKEN ERROR!!")
-                            if len(token) > 1:
-                                print("token is "+ str(token) + "\n")
-                                # this happens for llama NEVERMIND THAT IS THE <|begin_of_text|> SO THIS SHOULD NEVER HAPPEN
-                                raise Exception("token should not be more than one token")
-                            else:
-                                # this happens for gpt2, olmo
-                                prob += distrib[0][-1][token].detach().cpu().item() # for token in tokens)
+                        prob = sum(distrib[0][-1][token].detach().cpu().item() for token in tokens)
 
-                                if (run_type == "relative"): # subtract away the other tense words
-                                    subt_words = [item for j, sublist in enumerate(prompt.list_of_soln) if j != i for item in sublist] # all items we're not interested in
-                                    subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
-                                    prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
-                                    prob = prob - prob_subtr
+                        if (run_type == "relative"): # subtract away the other tense words
+                            subt_words = [item for j, sublist in enumerate(prompt.list_of_soln) if j != i for item in sublist] # all items we're not interested in
+                            subt_tokens = [self.tokenizer.encode(w)[0] for w in subt_words] # tokenize
+                            prob_subtr = sum(distrib[0][-1][word].detach().cpu().item() for word in subt_tokens) # sum all their probabilities                 
+                            prob = prob - prob_subtr
 
                         data.append({"layer": layer_i, "pos": pos_i, "prob": prob})
                 df = pd.DataFrame(data) 
@@ -299,10 +263,11 @@ class CausalTracer:
                 filepath = "./"+self.folder_path+"/"+run_type+"_"+prompt.descriptive_label+"_"+soln_txt+"_"+stream+"_"+timestamp
                 df.to_csv(filepath+".csv") # write csv
 
-                self.plot(prompt, soln_txt, stream, filepath) # read csv to create a png
+                self.plot(prompt, soln_txt, stream, filepath)
                 filepaths.append(filepath+".png")
         
-            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+self.name+"_"+stream+timestamp+"_"+".png"
+            # merge images for every stream
+            outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+self.model_id+"_"+stream+"_"+timestamp+".png"
             self.merge_images_horizontally(filepaths, outputfilepath)
 
 
@@ -322,17 +287,12 @@ class CausalTracer:
         if(stream=="attention_output"):
             hi_color="#C061A6"  # pink-purple midpoint
 
-
-        prompt_len=len(prompt.prompt)
-        font_size = 6
-        if prompt_len < 20:
-            font_size = 14
-        if prompt_len < 40:
-            font_size = 12
-        elif prompt_len < 60:
-            font_size = 10.5
-        elif prompt_len < 75:
-            font_size = 8
+    #   # change color based on stream
+    #     hi_color = "#00CCFF"    # blue
+    #     if(stream=="mlp_activation"):
+    #         hi_color="#006600"  # teal
+    #     if(stream=="attention_output"):
+    #         hi_color="#009980"  # green
 
         plot = (
             ggplot(df)
@@ -340,8 +300,8 @@ class CausalTracer:
             + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
             + theme(
                 figure_size=(4, 5),
-                axis_text_x=element_text(rotation=90, size=9.5),
-                plot_title=element_text(size=font_size), # make sure title fits
+                axis_text_x=element_text(rotation=90),
+                plot_title=element_text(size=len(prompt.prompt)/2) # make sure title fits
             )
             + scale_x_continuous(
                 breaks=breaks,
@@ -353,7 +313,7 @@ class CausalTracer:
             )
             + labs(
                 title=f"{prompt.prompt}",
-                y=f"Restored {stream} layer in {self.name}",
+                y=f"Restored {stream} layer in {self.model_id}",
                 fill="p("+soln_txt+")",
             )
         )
@@ -367,8 +327,11 @@ class CausalTracer:
     def merge_images_horizontally(self, image_paths, output_path="merged.png"):
         images = [Image.open(img) for img in image_paths]  # Open images
         
+        for image in images:
+            print(image)
         # Get total width and max height
         total_width = sum(img.width for img in images)
+        print("did total width")
         max_height = max(img.height for img in images)
 
         # Create blank image
@@ -388,7 +351,6 @@ class CausalTracer:
 
         # Save merged image
         merged_image.save(output_path)
-
 
 
 def restore_corrupted_with_interval_config(
@@ -441,14 +403,7 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
     def __str__(self):
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
 
-def add_prompts_for_beautiful_day_mlp_attention(tracer: CausalTracer):
-    tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
-            list_of_soln=TENSES, descriptive_label="beautiful_1980") 
-    tracer.add_prompt(prompt="In 2030 on a beautiful day there", dim_corrupted_words=2, 
-                list_of_soln=TENSES, descriptive_label="beautiful_2030")   
-    tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
-                list_of_soln=TENSES, descriptive_label="beautiful_elmsville")   
-    
+
 
 def add_prompts_for_beautiful_day(tracer: CausalTracer):
     tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
@@ -471,37 +426,81 @@ def add_prompts_for_1980(tracer: CausalTracer):
     tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
                 list_of_soln=TENSES, descriptive_label="1980_there")   
     tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
-                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")    
-    tracer.add_prompt(prompt="On a gloomy day in 1980 and there", dim_corrupted_words=6, 
-                list_of_soln=TENSES, descriptive_label="gloomy_end_1980")   
+                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")       # slighty longer prompt for 1980
+
 
 def add_prompts_for_relative(tracer: CausalTracer):
-    tracer.add_prompt(prompt="Tomorrow on a beautiful day there", dim_corrupted_words=1, 
-                        list_of_soln=TENSES, descriptive_label="beautiful_tmr")
-    tracer.add_prompt(prompt="In just three hours on a beautiful day there", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="beautiful_just_three_hours")
- 
+    tracer.add_prompt(prompt="In just three hours on a beautiful day", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="just_three_hours")       # slighty longer prompt for 1980
+    tracer.add_prompt(prompt="In just three hours on a beautiful day", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="just_three_hours")       # slighty longer prompt for 1980
+
 def add_prompts_for_task1d(tracer: CausalTracer):
-    tracer.add_prompt(prompt="The year is 1980, and COVID", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="1980_descr_covid")  
-    tracer.add_prompt(prompt="The year is 1980, and WiFi", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="1980_descr_wifi")   
-    tracer.add_prompt(prompt="The year is 1980, and planes", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="1980_descr_planes")  
-    tracer.add_prompt(prompt="The year is 2030, and COVID", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="2030_descr_covid")  
-    tracer.add_prompt(prompt="The year is 2030, and WiFi", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="2030_descr_wifi")   
-    tracer.add_prompt(prompt="The year is 2030, and planes", dim_corrupted_words=4, 
-                        list_of_soln=TENSES, descriptive_label="2030_descr_planes")  
+
+
+
+# aditi's combined list of mini-experiments to see whether the year affects the output, or if there's something else at play here...
+def add_prompts_for_experimental_runs(tracer: CausalTracer):
+
+    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
+    #                     list_of_soln=TENSES, descriptive_label="ctrl_there", year=1980)                 # this is our usual "there" test
+    # tracer.add_prompt(prompt="Before 1980 there", dim_corrupted_words=2, 
+    #                     list_of_soln=TENSES, descriptive_label="ctrl_before_there", year=1980)          # this tests if its relative to 1980 -- what happens now?
+    # tracer.add_prompt(prompt="After 1980 there", dim_corrupted_words=2, 
+    #                     list_of_soln=TENSES, descriptive_label="ctrl_after_there", year=1980)           # parallels before
     
-def add_prompts_for_thirty_years_before(tracer: CausalTracer):
-    tracer.add_prompt(prompt="Thirty years before 2060 on a beautiful day there", dim_corrupted_words=4, 
-                            list_of_soln=TENSES, descriptive_label="30_2060_beautiful")   
-    tracer.add_prompt(prompt="Thirty years before 2020 on a beautiful day there", dim_corrupted_words=4, 
-                            list_of_soln=TENSES, descriptive_label="30_2020_beautiful")   
-    tracer.add_prompt(prompt="Thirty years before 1980 on a beautiful day there", dim_corrupted_words=4, 
-                            list_of_soln=TENSES, descriptive_label="30_1980_beautiful")  
+    # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_beautiful", year=1980)       # slighty longer prompt for 1980
+    # tracer.add_prompt(prompt="On a beautiful day in summer there", dim_corrupted_words=6, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_summer", year=1980)          # replace 1980 with summmer -- time of year
+    # tracer.add_prompt(prompt="On a beautiful day in Elmsville there", dim_corrupted_words=6, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+    
+    # Usually run these three
+    # tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful", year=1980)       # slighty longer prompt after 1980
+    # tracer.add_prompt(prompt="In summer on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_summer", year=1980)          # replace 1980 with summmer -- time of year
+    # tracer.add_prompt(prompt="In Elmsville on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_elmsville", year=1980)       # replace 1980 with Elmsville -- fictional place
+    
+    # more years of the above
+    # tracer.add_prompt(prompt="In 2020 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020", year=2020)   
+    # tracer.add_prompt(prompt="2020 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2020_NO_IN", year=2020)    
+    # tracer.add_prompt(prompt="In 2030 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2030", year=2030)    
+ 
+    # tracer.add_prompt(prompt="In 2050 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2050", year=2050)   
+    # tracer.add_prompt(prompt="In 2000 on a beautiful day there", dim_corrupted_words=2, 
+    #                     list_of_soln=TENSES, descriptive_label="ctrl_bkw_beautiful_2000", year=2000)
+
+    # relative time attempt
+    # tracer.add_prompt(prompt="Thirty years before 2060 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_30_2060_beautiful", year=2030)   
+    # tracer.add_prompt(prompt="Thirty years before 2020 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_30_2020_beautiful", year=1990)   
+    # tracer.add_prompt(prompt="Thirty years before 1980 on a beautiful day there", dim_corrupted_words=2, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_30_1980_beautiful", year=1950)   
+
+    # like task 1d
+    # tracer.add_prompt(prompt="The year is 1950, and Wi-Fi", dim_corrupted_words=4, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_1950_descr_wifi", year=1950)   
+    # tracer.add_prompt(prompt="The year is 2020, and Wi-Fi", dim_corrupted_words=4, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_2020_descr_wifi", year=2020)   
+    # tracer.add_prompt(prompt="The year is 1950, and COVID", dim_corrupted_words=4, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_1950_descr_covid", year=1950)   
+    # tracer.add_prompt(prompt="The year is 2020, and COVID", dim_corrupted_words=4, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_2020_descr_covid", year=2020)   
+
+    # other relative misc
+    # tracer.add_prompt(prompt="Tomorrow on a beautiful day there", dim_corrupted_words=1, 
+    #                         list_of_soln=TENSES, descriptive_label="ctrl_tmr", year=2025)
+
+   
+
 
 ### defs for prompts
 
@@ -529,6 +528,8 @@ def add_prompts_over_years(tracer: CausalTracer, years=YEARS, prompts=PROMPTS, t
                             list_of_soln=tenses, descriptive_label=descr_label, year=y)
 
 
+
+
 def relative_2020_beautiful(tracer: CausalTracer):
     prompt="In 2020 on a beautiful day there"
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=2, 
@@ -540,48 +541,46 @@ def relative_2020_beautiful(tracer: CausalTracer):
 ########################################################################################################################
 
 
-
 def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    models = [("allenai/OLMo-1B-hf", "pyvene_causal_tracing/olmo"), ("meta-llama/Llama-3.2-1B", "pyvene_causal_tracing/llama")]
-    for model, folder in models:
-        tracer = CausalTracer(model_id=model, folder_path=folder) 
-        plot_only_block_outputs = True
+    tracer = CausalTracer(model_id="allenai/OLMo-1B-hf")  # can also pass an arg specifying the folder 
 
-        # DO THIS: set the appropriate test
+    
+    # DO THIS: set the appropriate test
+    add_prompts_for_experimental_runs(tracer)
+    # add_prompts_over_years(tracer)  # adds a lot of prompts -- loops over years and prompt structures
 
-        # 1. running! relative + task1d
-        # add_prompts_for_relative(tracer)
-        # add_prompts_for_task1d(tracer)
-        
-        # 2. running! beautiful_day
-        # add_prompts_for_beautiful_day(tracer)
+    # for the single relative generated graph
+    # relative_2020_beautiful(tracer)
 
-        # 3. running! 1980
-        # add_prompts_for_1980(tracer)
+    # DO THIS: set relative to true if you want the relative plots
+    relative = False
 
-        # 4. running! mlp-att
-        # plot_only_block_outputs = False
-        # add_prompts_for_beautiful_day_mlp_attention(tracer)
+    # loop over every prompt to run pyvene
+    for p in tracer.get_prompts():
 
-        # add_prompts_for_thirty_years_before(tracer)
+        # part 1        
+        # tracer.factual_recall(prompt=p)  
+
+        # part 2
+        # tracer.corrupted_run(prompt=p)   
+
+        # part 3: regular run over all tenses
+        if (not relative):
+            tracer.restore_run(prompt=p, timestamp=timestamp)
+
+        if (relative):
+            # relative runs:
+            # control which year we want to focus on for restore run. 
+            relative_prompt_focus = " was" # past
+            if p.year > 2005:
+                relative_prompt_focus=" is" # present
+            if p.year > 2025:
+                relative_prompt_focus=" will" # future
+
+            tracer.restore_run(prompt=p, timestamp=timestamp, run_type="relative", relative_prompt_focus=relative_prompt_focus)  # with subtraction
 
 
-
-
-        # set runtype="relative" for relative plots
-        # relative=False
-
-        # DO THIS: use this to control whether you plot only residuals vs mlp/attention
-        # plot_only_block_outputs = True
-
-        # loop over every prompt to run pyvene
-        for p in tracer.get_prompts():
-            # part 1        
-            # tracer.factual_recall(prompt=p)  
-
-            # part 3: regular run over all tenses
-            tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
 
 
 if __name__ == "__main__":
