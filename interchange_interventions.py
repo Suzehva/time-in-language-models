@@ -24,6 +24,7 @@ from plotnine import (
     facet_wrap,
     theme,
     element_text,
+    scale_fill_gradient,
     element_line,
     element_rect,
     geom_bar,
@@ -144,8 +145,11 @@ class InterchangeIntervention:
                     # # To plot them, I just multiply their probabilities since we're dealing with conditional probability, 
                     # TODO: should verify if that's okay
                     #raise Exception(f"current token: {token}")
+                    if self.model_id == "meta-llama/Llama-3.2-1B" and len(token) == 2 and token[0] == 128000: # 128000 is <|begin_of_text|> token for llama which we want to ignore TODO don't hardcode this
+                        token = [token[1]]
                     if len(token) > 1:
-                        # this happens for llama
+                        # this happens for llama NEVERMIND THAT IS THE <|begin_of_text|> SO THIS SHOULD NEVER HAPPEN
+                        raise Exception("token should not be more than one token")
                         prob = 1
                         for t in token:
                             prob *= float(distrib[0][-1][t])
@@ -198,7 +202,7 @@ class InterchangeIntervention:
         }
         """
         tokens = self.tokenizer.convert_ids_to_tokens(token_ids['input_ids'][0])
-        print(f"{len(tokens)} tokens in '{s}': {tokens}")
+        print(f"{len(tokens)} tokens in '{s}': {tokens} with token_ids: {token_ids}")
         return token_ids, tokens
 
 
@@ -215,7 +219,8 @@ class InterchangeIntervention:
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="prob"))
             + facet_wrap("~token") # splits the graph into multiple graphs, one for each token
-            + scale_fill_cmap("purple") 
+            + scale_fill_gradient(low="white", high="green", limits=(0, 1))  # Fixes 0 to light, 1 to dark
+            #+ scale_fill_cmap("Purples") 
 
             + theme(
                 axis_text_x=element_text(rotation=90),
@@ -278,7 +283,8 @@ class InterchangeIntervention:
             ggplot(merged_data)
             + geom_tile(aes(x="pos", y="layer", fill="prob"), color="white")
             + geom_text(aes(x="pos", y="layer", label="token"), size=8, color="black")
-            + scale_fill_cmap("purple") 
+            + scale_fill_gradient(low="white", high="green", limits=(0, 1))  # Fixes 0 to light, 1 to dark
+            #+ scale_fill_cmap("Purples") 
             + theme(
                 axis_text_x=element_text(rotation=90),
                 plot_title=element_text(size=10),
@@ -336,18 +342,56 @@ class InterchangeIntervention:
         ggsave(
             plot_bar, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
+    
+    def suze_plays(self):
+        output_to_measure = ["was", " was", "will", " will", "is", " is"]
+        for s in output_to_measure:
+            self.string_to_token_ids_and_tokens(s)
+        
+        
+        # tokens = [self.tokenizer.encode(word) for word in output_to_measure] # tokenizer.encode returns list of token ids
+        # print(f"tokens: {tokens}") 
+        # output_to_measure = [" was", " will", " is"]
+        # tokens = [self.tokenizer.encode(word) for word in output_to_measure] # tokenizer.encode returns list of token ids
+        # print(f"tokens: {tokens}")
+
+
+def fact_recall_meas():
+    # Factual recall measurements
+    interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
+    prompt_list = [
+        "In 2050 on a beautiful day there",
+        "In 2030 on a beautiful day there",
+        "In 2020 on a beautiful day there",
+        "In 2000 on a beautiful day there",
+        "In 1980 on a beautiful day there",
+        "In 1980 there",
+        "On a beautiful day in 1980 there",
+        "In Elmsville on a beautiful day there",
+        "In summer on a beautiful day there",
+    ]
+    for prompt in prompt_list:
+        interchange_intervention.factual_recall(prompt=prompt)
+
         
 
 def main():
-    base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
-    source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
-    # interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo/aditi_generated_mar_12") # aditi's code
+    #interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
+    # interchange_intervention.suze_plays()
+    # fact_recall_meas()
+    # return
+
+
+    
+    
+    interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
     #interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
     #interchange_intervention = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # for if you want to use gpt
-    interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
+    base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
+    source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
+    output_to_measure = [" was", " will", " is"] # Make sure to include space at the beginning!
 
 
-    output_to_measure = [" was", " will"] # Make sure to include space at the beginning!
     interchange_intervention.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
         interchange_intervention.factual_recall(prompt=s_p)
@@ -355,6 +399,12 @@ def main():
     interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
     interchange_intervention.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
     interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
+
+
+    
+    
+
+
 
 if __name__ == "__main__":
     main()
