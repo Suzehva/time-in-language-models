@@ -358,50 +358,180 @@ class InterchangeIntervention:
 
 def fact_recall_meas():
     # Factual recall measurements
-    interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
+    #interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
+    interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
+    
     prompt_list = [
         "In 2050 on a beautiful day there",
-        "In 2030 on a beautiful day there",
-        "In 2020 on a beautiful day there",
-        "In 2000 on a beautiful day there",
-        "In 1980 on a beautiful day there",
-        "In 1980 there",
-        "On a beautiful day in 1980 there",
-        "In Elmsville on a beautiful day there",
-        "In summer on a beautiful day there",
+        "Tomorrow on a beautiful day there",
+        "Tomorrow afternoon on a beautiful day there",
+        "In three hours on a beautiful day there",
+        "In just three hours on a beautiful day there",
+        "After two minutes on a beautiful day there",
+        "By next morning on a beautiful day there",
+        "In only two hours on a beautiful day there",
+        "Later this evening on a beautiful day there"
     ]
+
+    # prompt_list = [
+    #     "In 2050 on a beautiful day there",
+    #     "In 2030 on a beautiful day there",
+    #     "In 2020 on a beautiful day there",
+    #     "In 2000 on a beautiful day there",
+    #     "In 1980 on a beautiful day there",
+    #     "In 1980 there",
+    #     "On a beautiful day in 1980 there",
+    #     "In Elmsville on a beautiful day there",
+    #     "In summer on a beautiful day there",
+    # ]
+    # prompt_list = [
+    #     "In 2021 on a beautiful day there",
+    #     "In 2022 on a beautiful day there",
+    #     "In 2023 on a beautiful day there",
+    #     "In 2024 on a beautiful day there",
+    # ]
     for prompt in prompt_list:
         interchange_intervention.factual_recall(prompt=prompt)
 
-        
+def run_ii_experiment():
+    # working with sentences of 10 tokens
+    prompt_combos_llama = [
+        ("In 1980 on a beautiful day there", ["In 2050 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 2020 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 2000 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In Elmsville on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In just three hours on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 1980 on a beautiful day there"]), # nothing should change in output
+
+        ("In 2030 on a beautiful day there", ["In 2050 on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In 2030 on a beautiful day there"]), # nothing should change in output
+        ("In 2030 on a beautiful day there", ["In 2020 on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In 2000 on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In Elmsville on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In just three hours on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+
+        # now reverse
+        ("In 2050 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In 2020 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In 2000 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In just three hours on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In Elmsville on a beautiful day there", ["In 1980 on a beautiful day there"]),
+
+        ("In 2050 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In 2020 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In 2000 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In just three hours on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In Elmsville on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+    ]
+
+    # working with sentences of 7 tokens
+    prompt_combos_olmo = [ # use summer instead of elmsville (to make sentences the same amount of tokens) and don't use 2050 bc it gets split up into two tokens
+        ("In 1980 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 2020 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 2000 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In summer on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["Tomorrow on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 1980 on a beautiful day there"]), # nothing should change in output
+
+        ("In 2030 on a beautiful day there", ["In 2030 on a beautiful day there"]), # nothing should change in output
+        ("In 2030 on a beautiful day there", ["In 2020 on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In 2000 on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In summer on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["Tomorrow on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+
+        # now reverse
+        ("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In 2020 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In 2000 on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("In summer on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        ("Tomorrow on a beautiful day there", ["In 1980 on a beautiful day there"]),
+
+        ("In 2020 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In 2000 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In summer on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("Tomorrow on a beautiful day there", ["In 1980 on a beautiful day there"]),
+    ]
+
+    output_to_measure = [" was", " will", " is"] # Make sure to include space at the beginning!
+
+
+    # block_output
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground/olmo")
+    for base_prompt, source_prompts in prompt_combos_olmo:
+        results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
+        ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+        ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground/llama")
+    for base_prompt, source_prompts in prompt_combos_llama:
+        results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
+        ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+        ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+
+    # mlp_output
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground/olmo")
+    for base_prompt, source_prompts in prompt_combos_olmo:
+        results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="mlp_output") # options: attention_input, mlp_output, block_output
+        ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+        ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground/llama")
+    for base_prompt, source_prompts in prompt_combos_llama:
+        results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="mlp_output") # options: attention_input, mlp_output, block_output
+        ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+        ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+
+    # attention_output
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground/olmo")
+    for base_prompt, source_prompts in prompt_combos_olmo:
+        results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_output") # options: attention_input, mlp_output, block_output
+        ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+        ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground/llama")
+    for base_prompt, source_prompts in prompt_combos_llama:
+        results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_output") # options: attention_input, mlp_output, block_output
+        ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+        ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+
+
+
+    
 
 def main():
-    #interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
-    # interchange_intervention.suze_plays()
-    # fact_recall_meas()
-    # return
+    """
+    3 options for models: llama, gpt2 or olmo
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
+    ii_gpt2 = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # for if you want to use gpt
 
-
+    3 options (or more?) for components: attention_input, mlp_output, block_output
     
-    
-    interchange_intervention = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="pyvene_data_interchange_intervention_llama") # for if you want to use gpt
-    #interchange_intervention = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
-    #interchange_intervention = InterchangeIntervention(model_id="gpt2", folder_path="pyvene_data_interchange_intervention_gpt2") # for if you want to use gpt
+    Example usage:
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="pyvene_data_interchange_intervention_olmo") # options: allenai/OLMo-1B-hf or gpt2
     base_prompt = "In 1980 on a beautiful day there" # sentence where part of residual stream will be replaced
     source_prompts = ["In 2030 on a beautiful day there"] # sentence from which we take the replacement
     output_to_measure = [" was", " will", " is"] # Make sure to include space at the beginning!
 
-
-    interchange_intervention.factual_recall(prompt=base_prompt)
+    ii_olmo.factual_recall(prompt=base_prompt)
     for s_p in source_prompts:
-        interchange_intervention.factual_recall(prompt=s_p)
+        ii_olmo.factual_recall(prompt=s_p)
     results_df, output_results_df = interchange_intervention.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
-    interchange_intervention.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-    interchange_intervention.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
-    interchange_intervention.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
+    ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
+    ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+    ii_olmo.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
+    """
 
+    #fact_recall_meas()
+    run_ii_experiment()
 
-    
+    # TODO: add it so folder gets added automatically instead of requiring user to pre-make it
     
 
 
