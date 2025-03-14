@@ -336,7 +336,7 @@ class CausalTracer:
 
         plot = (
             ggplot(df)
-            + geom_tile(aes(x="pos", y="layer", fill="p("+soln_txt+")"))
+            + geom_tile(aes(y="layer", fill="p("+soln_txt+")"))
             + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
             + theme(
                 figure_size=(4, 5),
@@ -502,6 +502,10 @@ def add_prompts_for_thirty_years_before(tracer: CausalTracer):
                             list_of_soln=TENSES, descriptive_label="30_2020_beautiful")   
     tracer.add_prompt(prompt="Thirty years before 1980 on a beautiful day there", dim_corrupted_words=4, 
                             list_of_soln=TENSES, descriptive_label="30_1980_beautiful")  
+    
+def add_prompts_for_in_addition(tracer: CausalTracer):
+    tracer.add_prompt(prompt="In addition on a beautiful day there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="in_addition")   
 
 ### defs for prompts
 
@@ -550,23 +554,23 @@ def main():
 
         # DO THIS: set the appropriate test
 
-        # 1. running! relative + task1d
+        # 1. running! relative + task1d fs running
         # add_prompts_for_relative(tracer)
         # add_prompts_for_task1d(tracer)
         
-        # 2. running! beautiful_day
+        # 2. running! beautiful_day  fs running 
         # add_prompts_for_beautiful_day(tracer)
 
-        # 3. running! 1980
+        # 3. running! 1980 fs running
         # add_prompts_for_1980(tracer)
 
-        # 4. running! mlp-att
+        # 4. running! mlp-att fs running 
         # plot_only_block_outputs = False
         # add_prompts_for_beautiful_day_mlp_attention(tracer)
 
         # add_prompts_for_thirty_years_before(tracer)
 
-
+        add_prompts_for_in_addition(tracer)
 
 
         # set runtype="relative" for relative plots
