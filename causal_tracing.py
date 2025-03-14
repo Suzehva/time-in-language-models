@@ -274,9 +274,9 @@ class CausalTracer:
                         # can sum over multiple words' tokens instead of just one
                         prob = 0
                         for token in tokens:
-                            if self.model_id == "meta-llama/Llama-3.2-1B" and len(token) == 2 and token[0] == 128000: # 128000 is <|begin_of_text|> token for llama which we want to ignore TODO don't hardcode this
+                            if self.model_id == "meta-llama/Llama-3.2-1B" and len(token) == 2 and token[0] == 128000: 
+                                # 128000 is <|begin_of_text|> token for llama which we want to ignore TODO don't hardcode this
                                 token = [token[1]]
-                                # raise Exception("LLAMA TOKEN ERROR!!")
                             if len(token) > 1:
                                 print("token is "+ str(token) + "\n")
                                 # this happens for llama NEVERMIND THAT IS THE <|begin_of_text|> SO THIS SHOULD NEVER HAPPEN
@@ -316,11 +316,11 @@ class CausalTracer:
         breaks = prompt.breaks
 
         # change color based on stream
-        hi_color = "purple"
+        hi_color = "purple" # "#660099" 
         if(stream=="mlp_activation"):
             hi_color="pink"  
         if(stream=="attention_output"):
-            hi_color="#C061A6"  # pink-purple midpoint
+            hi_color="#FF9900"  # orange 
 
 
         prompt_len=len(prompt.prompt)
@@ -336,7 +336,7 @@ class CausalTracer:
 
         plot = (
             ggplot(df)
-            + geom_tile(aes(y="layer", fill="p("+soln_txt+")"))
+            + geom_tile(aes(x="pos", y="layer", fill="p("+soln_txt+")"))
             + scale_fill_gradient(low="white", high=hi_color, limits=(0, 1))  # Fixes 0 to light, 1 to dark
             + theme(
                 figure_size=(4, 5),
@@ -353,11 +353,14 @@ class CausalTracer:
             )
             + labs(
                 title=f"{prompt.prompt}",
+                x="",  # Remove x-axis label
                 y=f"Restored {stream} layer in {self.name}",
                 fill="p("+soln_txt+")",
             )
         )
 
+        print(df.columns)
+        print(df.head())
         ggsave(
             plot, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
@@ -468,11 +471,11 @@ def add_prompts_for_beautiful_day(tracer: CausalTracer):
 
 
 def add_prompts_for_1980(tracer: CausalTracer):
-    tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
-                list_of_soln=TENSES, descriptive_label="1980_there")   
-    tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
-                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")    
-    tracer.add_prompt(prompt="On a gloomy day in 1980 and there", dim_corrupted_words=6, 
+    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
+    #             list_of_soln=TENSES, descriptive_label="1980_there")   
+    # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
+    #             list_of_soln=TENSES, descriptive_label="beautiful_end_1980")    
+    tracer.add_prompt(prompt="On a gloomy day in 1980 there", dim_corrupted_words=6, 
                 list_of_soln=TENSES, descriptive_label="gloomy_end_1980")   
 
 def add_prompts_for_relative(tracer: CausalTracer):
@@ -504,8 +507,49 @@ def add_prompts_for_thirty_years_before(tracer: CausalTracer):
                             list_of_soln=TENSES, descriptive_label="30_1980_beautiful")  
     
 def add_prompts_for_in_addition(tracer: CausalTracer):
-    tracer.add_prompt(prompt="In addition on a beautiful day there", dim_corrupted_words=2, 
-                list_of_soln=TENSES, descriptive_label="in_addition")   
+    tracer.add_prompt(prompt="In addition on a beautiful day there",                         
+        dim_corrupted_words=2, list_of_soln=TENSES, descriptive_label="in_addition")   
+    tracer.add_prompt(prompt="In contrast on a beautiful day there", dim_corrupted_words=2, 
+        list_of_soln=TENSES, descriptive_label="in_contrast")   
+    tracer.add_prompt(prompt="In response on a beautiful day there", dim_corrupted_words=2, 
+        list_of_soln=TENSES, descriptive_label="in_responset")   
+    tracer.add_prompt(prompt="In conclusion on a beautiful day there", dim_corrupted_words=2, 
+        list_of_soln=TENSES, descriptive_label="in_conclusion")   
+    tracer.add_prompt(prompt="In summary on a beautiful day there", dim_corrupted_words=2, 
+        list_of_soln=TENSES, descriptive_label="in_summary")   
+
+
+
+def relative_2020_beautiful(tracer: CausalTracer):
+    prompt="In 2020 on a beautiful day there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=2, 
+                            list_of_soln=TENSES, descriptive_label="2020_beautiful_day", year=2020)
+    # NOTES: make sure to set it to relative in main
+    # also set the correct relative_prompt_focus term (is vs will) in the restore_run call
+
+def add_prompts_for_now_there(tracer: CausalTracer):
+    prompt="Compared to 1980, now there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="1980_now_there")
+    prompt="Compared to 2030, now there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="2030_now_there")
+    prompt="Compared to 2050, now there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="2050_now_there")
+
+
+def add_prompts_for_simple_relative_test(tracer: CausalTracer):
+    prompt="Now there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="now_there")
+    prompt="Before there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="before_there")
+    prompt="Afterwards there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="afterwards_there")
+    
 
 ### defs for prompts
 
@@ -533,12 +577,7 @@ def add_prompts_over_years(tracer: CausalTracer, years=YEARS, prompts=PROMPTS, t
                             list_of_soln=tenses, descriptive_label=descr_label, year=y)
 
 
-def relative_2020_beautiful(tracer: CausalTracer):
-    prompt="In 2020 on a beautiful day there"
-    tracer.add_prompt(prompt=prompt, dim_corrupted_words=2, 
-                            list_of_soln=TENSES, descriptive_label="2020_beautiful_day", year=2020)
-    # NOTES: make sure to set it to relative in main
-    # also set the correct relative_prompt_focus term (is vs will) in the restore_run call
+
 
 
 ########################################################################################################################
@@ -554,30 +593,37 @@ def main():
 
         # DO THIS: set the appropriate test
 
-        # 1. running! relative + task1d fs running
+        # 1. 
         # add_prompts_for_relative(tracer)
         # add_prompts_for_task1d(tracer)
         
-        # 2. running! beautiful_day  fs running 
+        # 2. 
         # add_prompts_for_beautiful_day(tracer)
 
-        # 3. running! 1980 fs running
+        # 3. 
         # add_prompts_for_1980(tracer)
 
-        # 4. running! mlp-att fs running 
-        # plot_only_block_outputs = False
+        # 4.
+        # DO THIS: use this to control whether you plot only residuals vs mlp/attention
+        # plot_only_block_outputs = False  
         # add_prompts_for_beautiful_day_mlp_attention(tracer)
 
+        # 5. 
+        # add_prompts_for_in_addition(tracer)
+
+        # 6. 
         # add_prompts_for_thirty_years_before(tracer)
 
-        add_prompts_for_in_addition(tracer)
+        # 7.  RUNNING
+        add_prompts_for_now_there(tracer)
+
+        # 8.  RUNNING
+        # add_prompts_for_simple_relative_test(tracer)
+
 
 
         # set runtype="relative" for relative plots
-        # relative=False
-
-        # DO THIS: use this to control whether you plot only residuals vs mlp/attention
-        # plot_only_block_outputs = True
+        relative=False
 
         # loop over every prompt to run pyvene
         for p in tracer.get_prompts():
