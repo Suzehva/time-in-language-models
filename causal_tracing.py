@@ -527,7 +527,7 @@ def relative_2020_beautiful(tracer: CausalTracer):
     # NOTES: make sure to set it to relative in main
     # also set the correct relative_prompt_focus term (is vs will) in the restore_run call
 
-def add_prompts_for_now_there(tracer: CausalTracer):
+def add_prompts_for_compared_test(tracer: CausalTracer):
     prompt="Compared to 1980, now there"
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
                             list_of_soln=TENSES, descriptive_label="1980_now_there")
@@ -539,17 +539,26 @@ def add_prompts_for_now_there(tracer: CausalTracer):
                             list_of_soln=TENSES, descriptive_label="2050_now_there")
 
 
-def add_prompts_for_simple_relative_test(tracer: CausalTracer):
-    prompt="Now there"
+def add_prompts_for_now_there(tracer: CausalTracer):
+    # prompt="Now there"
+    # tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+    #                         list_of_soln=TENSES, descriptive_label="now_there")
+    # prompt="Before there"
+    # tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+    #                         list_of_soln=TENSES, descriptive_label="before_there")
+    # prompt="Afterwards there"
+    # tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+    #                         list_of_soln=TENSES, descriptive_label="afterwards_there")
+    prompt="After there"
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
-                            list_of_soln=TENSES, descriptive_label="now_there")
-    prompt="Before there"
+                            list_of_soln=TENSES, descriptive_label="after_there")
+    prompt="Now on a beautiful day there"
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
-                            list_of_soln=TENSES, descriptive_label="before_there")
-    prompt="Afterwards there"
+                            list_of_soln=TENSES, descriptive_label="now_beautiful_there")
+    prompt="Before on a beautiful day there"
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
-                            list_of_soln=TENSES, descriptive_label="afterwards_there")
-    
+                            list_of_soln=TENSES, descriptive_label="before_beautiful_there")
+
 
 ### defs for prompts
 
@@ -618,7 +627,7 @@ def main():
         add_prompts_for_now_there(tracer)
 
         # 8.  RUNNING
-        # add_prompts_for_simple_relative_test(tracer)
+        # add_prompts_for_compared_test(tracer)
 
 
 
