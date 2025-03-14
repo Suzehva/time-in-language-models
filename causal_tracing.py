@@ -540,15 +540,15 @@ def add_prompts_for_compared_test(tracer: CausalTracer):
 
 
 def add_prompts_for_now_there(tracer: CausalTracer):
-    # prompt="Now there"
-    # tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
-    #                         list_of_soln=TENSES, descriptive_label="now_there")
-    # prompt="Before there"
-    # tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
-    #                         list_of_soln=TENSES, descriptive_label="before_there")
-    # prompt="Afterwards there"
-    # tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
-    #                         list_of_soln=TENSES, descriptive_label="afterwards_there")
+    prompt="Now there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="now_there")
+    prompt="Before there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="before_there")
+    prompt="Afterwards there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="afterwards_there")
     prompt="After there"
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
                             list_of_soln=TENSES, descriptive_label="after_there")
@@ -614,8 +614,8 @@ def main():
 
         # 4.
         # DO THIS: use this to control whether you plot only residuals vs mlp/attention
-        # plot_only_block_outputs = False  
-        # add_prompts_for_beautiful_day_mlp_attention(tracer)
+        plot_only_block_outputs = False  
+        add_prompts_for_beautiful_day_mlp_attention(tracer)
 
         # 5. 
         # add_prompts_for_in_addition(tracer)
@@ -624,7 +624,7 @@ def main():
         # add_prompts_for_thirty_years_before(tracer)
 
         # 7.  RUNNING
-        add_prompts_for_now_there(tracer)
+        # add_prompts_for_now_there(tracer)
 
         # 8.  RUNNING
         # add_prompts_for_compared_test(tracer)
