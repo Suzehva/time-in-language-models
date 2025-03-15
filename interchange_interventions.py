@@ -488,11 +488,6 @@ def run_ii_experiment():
         ("In 2030 there", ["In 1980 there"]),
     ]
 
-    prompt_combos_llama = [
-        ("Compared to 1980, now there", ["Compared to 2030, now there"]),
-        ("Compared to 2030, now there", ["Compared to 1980, now there"]),
-    ]
-
 
     # working with sentences of 7 tokens
     prompt_combos_olmo = [ # use summer instead of elmsville (to make sentences the same amount of tokens) and don't use 2050 bc it gets split up into two tokens
@@ -558,7 +553,7 @@ def run_ii_experiment():
         ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground/llama")
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground_march_13/llama")
     for base_prompt, source_prompts in prompt_combos_llama:
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
@@ -619,7 +614,7 @@ def run_ii_experiment_v2():
         ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground/llama")
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground_march_13/llama")
     for base_prompt, source_prompts in prompt_combos_llama:
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
