@@ -620,39 +620,39 @@ def run_ii_experiment_v3():
     output_to_measure = [" was", " is", " will"] # Make sure to include space at the beginning!
 
     # block_output
-    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground_march_13/olmo")
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="final_project_data/olmo")
     for base_prompt, source_prompts in prompt_combos_olmo:
         results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
         ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground_march_13/llama")
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="final_project_data/llama")
     for base_prompt, source_prompts in prompt_combos_llama:
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
     # mlp_output
-    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground_march_13/olmo")
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="final_project_data/olmo")
     for base_prompt, source_prompts in prompt_combos_olmo:
         results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="mlp_output") # options: attention_input, mlp_output, block_output
         ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground_march_13/llama")
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="final_project_data/llama")
     for base_prompt, source_prompts in prompt_combos_llama:
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="mlp_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
     # attention_output
-    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground_march_13/olmo")
+    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="final_project_data/olmo")
     for base_prompt, source_prompts in prompt_combos_olmo:
         results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_output") # options: attention_input, mlp_output, block_output
         ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="ii_playground_march_13/llama")
+    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="final_project_data/llama")
     for base_prompt, source_prompts in prompt_combos_llama:
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
@@ -703,7 +703,7 @@ def main():
     ii_olmo.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
     """
 
-    fact_recall_meas()
+    #fact_recall_meas()
     #run_ii_experiment()
     #run_ii_experiment_v2()
     run_ii_experiment_v3()
