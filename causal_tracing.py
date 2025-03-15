@@ -128,7 +128,7 @@ class CausalTracer:
         # ("In 2050 there", 3, 2, [[[0, 1]]], [ [" was", " were"], [" will"]], ["In*", "2050*", "there"], [0, 1, 2], 1980)
         prompt_obj = Prompt(prompt, len_prompt_tokens, len_corrupted_tokens, corrupted_tokens_indices, list_of_soln, descriptive_label, custom_labels, breaks, year) 
                 
-        print("\nPROMPT OBJ\n" + str(prompt_obj))
+        # print("\nPROMPT OBJ\n" + str(prompt_obj))
         self.prompts.append(prompt_obj)
 
 
@@ -444,6 +444,10 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
     def __str__(self):
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
 
+
+##################################################################################################
+##################################################################################################
+
 def add_prompts_for_beautiful_day_mlp_attention(tracer: CausalTracer):
     tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
             list_of_soln=TENSES, descriptive_label="beautiful_1980") 
@@ -471,10 +475,10 @@ def add_prompts_for_beautiful_day(tracer: CausalTracer):
 
 
 def add_prompts_for_1980(tracer: CausalTracer):
-    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
-    #             list_of_soln=TENSES, descriptive_label="1980_there")   
-    # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
-    #             list_of_soln=TENSES, descriptive_label="beautiful_end_1980")    
+    tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="1980_there")   
+    tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")    
     tracer.add_prompt(prompt="On a gloomy day in 1980 there", dim_corrupted_words=6, 
                 list_of_soln=TENSES, descriptive_label="gloomy_end_1980")   
 
@@ -526,6 +530,7 @@ def relative_2020_beautiful(tracer: CausalTracer):
                             list_of_soln=TENSES, descriptive_label="2020_beautiful_day", year=2020)
     # NOTES: make sure to set it to relative in main
     # also set the correct relative_prompt_focus term (is vs will) in the restore_run call
+
 
 def add_prompts_for_compared_test(tracer: CausalTracer):
     prompt="Compared to 1980, now there"
@@ -603,44 +608,45 @@ def main():
         # DO THIS: set the appropriate test
 
         # 1. 
-        # add_prompts_for_relative(tracer)
+        add_prompts_for_relative(tracer)
         # add_prompts_for_task1d(tracer)
         
-        # 2. 
+        # # 2. 
         # add_prompts_for_beautiful_day(tracer)
 
-        # 3. 
+        # # 3. 
         # add_prompts_for_1980(tracer)
 
-        # 4.
-        # DO THIS: use this to control whether you plot only residuals vs mlp/attention
-        plot_only_block_outputs = False  
-        add_prompts_for_beautiful_day_mlp_attention(tracer)
+        # # 4.
+        # # DO THIS: use this to control whether you plot only residuals vs mlp/attention
+        # # plot_only_block_outputs = False  
+        # # add_prompts_for_beautiful_day_mlp_attention(tracer)
 
-        # 5. 
+        # # 5. 
         # add_prompts_for_in_addition(tracer)
 
-        # 6. 
-        # add_prompts_for_thirty_years_before(tracer)
+        # # 6.  NEVER RUN
+        # # add_prompts_for_thirty_years_before(tracer)
 
-        # 7.  RUNNING
+        # # 7.  
         # add_prompts_for_now_there(tracer)
 
-        # 8.  RUNNING
+        # # 8.  
         # add_prompts_for_compared_test(tracer)
-
-
 
         # set runtype="relative" for relative plots
         relative=False
 
+
+        print("\n\n\nSWITCHING MODELS!!!!!!!!!\n\n\n")
+
         # loop over every prompt to run pyvene
         for p in tracer.get_prompts():
             # part 1        
-            # tracer.factual_recall(prompt=p)  
+            tracer.factual_recall(prompt=p)  
 
             # part 3: regular run over all tenses
-            tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
+            # tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
 
 
 if __name__ == "__main__":
