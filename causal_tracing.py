@@ -609,13 +609,13 @@ def main():
 
         # 1. 
         add_prompts_for_relative(tracer)
-        # add_prompts_for_task1d(tracer)
+        add_prompts_for_task1d(tracer)
         
         # # 2. 
-        # add_prompts_for_beautiful_day(tracer)
+        add_prompts_for_beautiful_day(tracer)
 
         # # 3. 
-        # add_prompts_for_1980(tracer)
+        add_prompts_for_1980(tracer)
 
         # # 4.
         # # DO THIS: use this to control whether you plot only residuals vs mlp/attention
@@ -623,16 +623,16 @@ def main():
         # # add_prompts_for_beautiful_day_mlp_attention(tracer)
 
         # # 5. 
-        # add_prompts_for_in_addition(tracer)
+        add_prompts_for_in_addition(tracer)
 
         # # 6.  NEVER RUN
         # # add_prompts_for_thirty_years_before(tracer)
 
         # # 7.  
-        # add_prompts_for_now_there(tracer)
+        add_prompts_for_now_there(tracer)
 
         # # 8.  
-        # add_prompts_for_compared_test(tracer)
+        add_prompts_for_compared_test(tracer)
 
         # set runtype="relative" for relative plots
         relative=False
