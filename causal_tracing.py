@@ -1,8 +1,3 @@
-# aditi todo :)
-# summer/elmsville on II
-# add gpt/llama support (on causal_tracing.py file)
- 
-
 # https://stanfordnlp.github.io/pyvene/tutorials/advanced_tutorials/Causal_Tracing.html
 
 import os
@@ -23,7 +18,7 @@ from pyvene import (
     create_gpt2
 )
 
-from PIL import Image
+from PIL import Image, ImageDraw
 
 # TODO remove plotnine im not using
 from plotnine import (
@@ -105,10 +100,6 @@ class CausalTracer:
         self.folder_path = folder_path
 
     def add_prompt(self, prompt: str, dim_corrupted_words: int, list_of_soln: list[str], descriptive_label: str, year=2000):
-        # TODO might need to take care of choosing the corrupted tokens manually...
-        # if (prompt[-1] != " "):
-        #     prompt+=" " # in case the user did not add a space at the end of the prompt. not adding a space messes up the prompt list calculation below.
-        # only need a year for relative stuff
 
         _, prompt_tokens = self.string_to_token_ids_and_tokens(prompt)
         len_prompt_tokens = len(prompt_tokens)
@@ -128,7 +119,7 @@ class CausalTracer:
         # ("In 2050 there", 3, 2, [[[0, 1]]], [ [" was", " were"], [" will"]], ["In*", "2050*", "there"], [0, 1, 2], 1980)
         prompt_obj = Prompt(prompt, len_prompt_tokens, len_corrupted_tokens, corrupted_tokens_indices, list_of_soln, descriptive_label, custom_labels, breaks, year) 
                 
-        print("\nPROMPT OBJ\n" + str(prompt_obj))
+        # print("\nPROMPT OBJ\n" + str(prompt_obj))
         self.prompts.append(prompt_obj)
 
 
@@ -175,6 +166,7 @@ class CausalTracer:
             raise Exception(f'only olmo, gpt2 is supported at this time') 
 
         distrib = embed_to_distrib(self.model, res.last_hidden_state, logits=False)
+        # print("DISTRIB = " + str(distrib)) # debug
         top_vals(self.tokenizer, distrib[0][-1], n=10) # prints top 10 results from distribution
 
     def corrupted_run(self, prompt: Prompt):
@@ -225,8 +217,10 @@ class CausalTracer:
             # don't plot anything besides block output if we dont want it
             if plot_only_block_outputs and stream != "block_output":    # only run block outputs
                 continue
-            elif not plot_only_block_outputs and stream == "block_output":    # run non-block outputs (mlp and attention)
-                continue
+            # otherwise, generate all graph types!
+
+            # elif not plot_only_block_outputs and stream == "block_output":    # run non-block outputs (mlp and attention)
+            #     continue
         
             for i in range(len(prompt.list_of_soln)): # pylint: disable=consider-using-enumerate
                 solns = prompt.list_of_soln[i]
@@ -238,7 +232,6 @@ class CausalTracer:
                 
                 print("solutions: " + str(solns) +"\n")
                 tokens = [self.tokenizer.encode(soln) for soln in solns]  # this provides same results as suze's tokenizer method
-                # tokens = [self.tokenizer.encode(soln)[0] for soln in solns]  # this provides same results as suze's tokenizer method
                 print("\n\nin restore run, tokens is:\n" + str(tokens))
                 
                 data = []
@@ -303,7 +296,7 @@ class CausalTracer:
                 filepaths.append(filepath+".png")
         
             outputfilepath="./"+self.folder_path+"/"+"combined_"+(prompt.prompt.replace(' ', '_'))+"_"+self.name+"_"+stream+timestamp+"_"+".png"
-            self.merge_images_horizontally(filepaths, outputfilepath)
+            self.merge_images_horizontally(filepaths, outputfilepath, title=prompt.prompt)
 
 
     def plot(self, prompt: Prompt, soln_txt: str, stream: str, filepath:str):
@@ -322,7 +315,6 @@ class CausalTracer:
         if(stream=="attention_output"):
             hi_color="#FF9900"  # orange 
 
-
         prompt_len=len(prompt.prompt)
         font_size = 6
         if prompt_len < 20:
@@ -334,6 +326,10 @@ class CausalTracer:
         elif prompt_len < 75:
             font_size = 8
 
+        legend_position_="right"
+        if stream != "attention_output":
+            legend_position_="none"
+
         plot = (
             ggplot(df)
             + geom_tile(aes(x="pos", y="layer", fill="p("+soln_txt+")"))
@@ -342,6 +338,7 @@ class CausalTracer:
                 figure_size=(4, 5),
                 axis_text_x=element_text(rotation=90, size=9.5),
                 plot_title=element_text(size=font_size), # make sure title fits
+                legend_position=legend_position_
             )
             + scale_x_continuous(
                 breaks=breaks,
@@ -352,7 +349,7 @@ class CausalTracer:
                 labels=[str(i) for i in range(self.model.config.num_hidden_layers)]  # Convert to strings for labels
             )
             + labs(
-                title=f"{prompt.prompt}",
+                title="",
                 x="",  # Remove x-axis label
                 y=f"Restored {stream} layer in {self.name}",
                 fill="p("+soln_txt+")",
@@ -364,10 +361,8 @@ class CausalTracer:
         ggsave(
             plot, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
-        # print(plot)
 
-
-    def merge_images_horizontally(self, image_paths, output_path="merged.png"):
+    def merge_images_horizontally(self, image_paths, output_path="merged.png", title="hello_world"):
         images = [Image.open(img) for img in image_paths]  # Open images
         
         # Get total width and max height
@@ -384,6 +379,27 @@ class CausalTracer:
             x_offset += img.width
             img.close()
 
+        # TODO MERGE ON TITLE
+        # Choose font and size
+        text_height = 25  # Adjust as needed
+
+        # Create a new image with extra space for the title
+        final_image = Image.new("RGBA", (total_width, max_height + text_height), (255, 255, 255, 255))
+        draw = ImageDraw.Draw(final_image)
+
+        # Draw the title in the extra space
+        text_width, _ = draw.textsize(title)
+        text_x = (total_width - text_width) // 2
+        text_y = (text_height - 5) // 2  # Center vertically in the title area
+        draw.text((text_x, text_y), title, fill="black")
+
+        # Paste the merged image below the title
+        final_image.paste(merged_image, (0, text_height))
+
+        # Save or show the result
+        final_image.save(output_path)
+
+
         # delete all the extra images and csv files
         for img_path in image_paths:
             os.remove(img_path)  # Delete the individual img file
@@ -391,8 +407,6 @@ class CausalTracer:
 
         # Save merged image
         merged_image.save(output_path)
-
-
 
 def restore_corrupted_with_interval_config(
     layer, device, dim_corrupted_tokens, stream="mlp_activation", window=10, num_layers=48):
@@ -444,6 +458,10 @@ class NoiseIntervention(ConstantSourceIntervention, LocalistRepresentationInterv
     def __str__(self):
         return f"NoiseIntervention(embed_dim={self.embed_dim})"
 
+
+##################################################################################################
+##################################################################################################
+
 def add_prompts_for_beautiful_day_mlp_attention(tracer: CausalTracer):
     tracer.add_prompt(prompt="In 1980 on a beautiful day there", dim_corrupted_words=2, 
             list_of_soln=TENSES, descriptive_label="beautiful_1980") 
@@ -471,14 +489,16 @@ def add_prompts_for_beautiful_day(tracer: CausalTracer):
 
 
 def add_prompts_for_1980(tracer: CausalTracer):
-    # tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
-    #             list_of_soln=TENSES, descriptive_label="1980_there")   
-    # tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
-    #             list_of_soln=TENSES, descriptive_label="beautiful_end_1980")    
+    tracer.add_prompt(prompt="In 1980 there", dim_corrupted_words=2, 
+                list_of_soln=TENSES, descriptive_label="1980_there")   
+    tracer.add_prompt(prompt="On a beautiful day in 1980 there", dim_corrupted_words=6, 
+                list_of_soln=TENSES, descriptive_label="beautiful_end_1980")    
     tracer.add_prompt(prompt="On a gloomy day in 1980 there", dim_corrupted_words=6, 
                 list_of_soln=TENSES, descriptive_label="gloomy_end_1980")   
 
 def add_prompts_for_relative(tracer: CausalTracer):
+    tracer.add_prompt(prompt="Yesterday on a beautiful day there", dim_corrupted_words=1, 
+                        list_of_soln=TENSES, descriptive_label="beautiful_yest")
     tracer.add_prompt(prompt="Tomorrow on a beautiful day there", dim_corrupted_words=1, 
                         list_of_soln=TENSES, descriptive_label="beautiful_tmr")
     tracer.add_prompt(prompt="In just three hours on a beautiful day there", dim_corrupted_words=4, 
@@ -519,7 +539,6 @@ def add_prompts_for_in_addition(tracer: CausalTracer):
         list_of_soln=TENSES, descriptive_label="in_summary")   
 
 
-
 def relative_2020_beautiful(tracer: CausalTracer):
     prompt="In 2020 on a beautiful day there"
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=2, 
@@ -538,6 +557,17 @@ def add_prompts_for_compared_test(tracer: CausalTracer):
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
                             list_of_soln=TENSES, descriptive_label="2050_now_there")
 
+
+def add_prompts_for_compared_without_now_test(tracer: CausalTracer):
+    prompt="Compared to 1980, there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="1980_there")
+    prompt="Compared to 2030, there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="2030_there")
+    prompt="Compared to 2050, there"
+    tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
+                            list_of_soln=TENSES, descriptive_label="2050_there")
 
 def add_prompts_for_now_there(tracer: CausalTracer):
     prompt="Now there"
@@ -558,6 +588,7 @@ def add_prompts_for_now_there(tracer: CausalTracer):
     prompt="Before on a beautiful day there"
     tracer.add_prompt(prompt=prompt, dim_corrupted_words=3, 
                             list_of_soln=TENSES, descriptive_label="before_beautiful_there")
+
 
 
 ### defs for prompts
@@ -606,38 +637,40 @@ def main():
         # add_prompts_for_relative(tracer)
         # add_prompts_for_task1d(tracer)
         
-        # 2. 
+        # # 2. 
         # add_prompts_for_beautiful_day(tracer)
 
-        # 3. 
+        # # 3. 
         # add_prompts_for_1980(tracer)
 
-        # 4.
-        # DO THIS: use this to control whether you plot only residuals vs mlp/attention
+        # # 4.
+        # # DO THIS: use this to control whether you plot only residuals vs mlp/attention
         plot_only_block_outputs = False  
         add_prompts_for_beautiful_day_mlp_attention(tracer)
 
-        # 5. 
+        # # 5. 
         # add_prompts_for_in_addition(tracer)
 
-        # 6. 
-        # add_prompts_for_thirty_years_before(tracer)
+        # # 6.  NEVER RUN
+        # # add_prompts_for_thirty_years_before(tracer)
 
-        # 7.  RUNNING
+        # # 7.  
         # add_prompts_for_now_there(tracer)
+        # add_prompts_for_compared_without_now_test(tracer)
 
-        # 8.  RUNNING
+        # # 8.  
         # add_prompts_for_compared_test(tracer)
 
-
-
-        # set runtype="relative" for relative plots
+        # set runtype="relative" for relative plots if true
         relative=False
+
+        print("\n\n\nSWITCHING MODELS!!!!!!!!!\n\n\n")
 
         # loop over every prompt to run pyvene
         for p in tracer.get_prompts():
-            # part 1        
+            # part 1 & 2     
             # tracer.factual_recall(prompt=p)  
+            # tracer.corrupted_run(prompt=p)  
 
             # part 3: regular run over all tenses
             tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
