@@ -380,9 +380,10 @@ def fact_recall_meas():
     
    
     prompt_list = [
-        "In 2030 on a beautiful day there",
-        "In Rome on a beautiful day there",
-        "In Elmsville on a beautiful day there",
+        "In contrast on a beautiful day there",
+        "In summary on a beautiful day there",
+        "In addition on a beautiful day there",
+        "In response on a beautiful day there",
     ]
 
     for prompt in prompt_list:
@@ -621,9 +622,9 @@ def run_ii_experiment_v3():
         #("Compared to 2030 there", ["Compared to 1980 there"]),
         # ("In 1980 on a beautiful day he", ["In 2030 on a beautiful day he"]),
         # ("In 2030 on a beautiful day he", ["In 1980 on a beautiful day he"]),
-        ("In contrast on a beautiful day there", ["In summary on a beautiful day he"]),
-        ("In contrast on a beautiful day there", ["In addition on a beautiful day he"]),
-        ("In contrast on a beautiful day there", ["In response on a beautiful day he"]),
+        ("In contrast on a beautiful day there", ["In summary on a beautiful day there"]),
+        ("In contrast on a beautiful day there", ["In addition on a beautiful day there"]),
+        ("In contrast on a beautiful day there", ["In response on a beautiful day there"]),
         
         
     ]
@@ -632,9 +633,9 @@ def run_ii_experiment_v3():
         # ("Compared to 2030 on a beautiful day there", ["Compared to 1980 on a beautiful day there"]),
         # ("In 1980 on a beautiful day he", ["In 2030 on a beautiful day he"]),
         # ("In 2030 on a beautiful day he", ["In 1980 on a beautiful day he"]),
-        ("In contrast on a beautiful day there", ["In summary on a beautiful day he"]),
-        ("In contrast on a beautiful day there", ["In addition on a beautiful day he"]),
-        ("In contrast on a beautiful day there", ["In response on a beautiful day he"]),
+        ("In contrast on a beautiful day there", ["In summary on a beautiful day there"]),
+        ("In contrast on a beautiful day there", ["In addition on a beautiful day there"]),
+        ("In contrast on a beautiful day there", ["In response on a beautiful day there"]),
     ]
 
     output_to_measure = [" was", " is", " will"] # Make sure to include space at the beginning!
@@ -723,10 +724,10 @@ def main():
     ii_olmo.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
     """
 
-    #fact_recall_meas()
+    fact_recall_meas()
     #run_ii_experiment()
     #run_ii_experiment_v2()
-    run_ii_experiment_v3()
+    #run_ii_experiment_v3()
     #test_plots()
 
     # TODO: add it so folder gets added automatically instead of requiring user to pre-make it
