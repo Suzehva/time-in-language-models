@@ -380,9 +380,10 @@ def fact_recall_meas():
     
    
     prompt_list = [
-        "In 2030 on a beautiful day there",
-        "In Rome on a beautiful day there",
-        "In Elmsville on a beautiful day there",
+        "In contrast on a beautiful day there",
+        "In summary on a beautiful day there",
+        "In addition on a beautiful day there",
+        "In response on a beautiful day there",
     ]
 
     for prompt in prompt_list:
@@ -607,14 +608,34 @@ def run_ii_experiment_v2():
 def run_ii_experiment_v3():
 
     prompt_combos_olmo = [
-        ("In 1980 on a beautiful day there", ["In Rome on a beautiful day there"]),
-        ("In Rome on a beautiful day there", ["In 1980 on a beautiful day there"]),
-        ("In 2030 on a beautiful day there", ["In Rome on a beautiful day there"]),
-        ("In Rome on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        #("In 1980 on a beautiful day there", ["In Rome on a beautiful day there"]),
+        #("In Rome on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        #("In 2030 on a beautiful day there", ["In Rome on a beautiful day there"]),
+        #("In Rome on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        #("In 1980 on a beautiful day there", ["Last week on a beautiful day there"]),
+        #("In 2030 on a beautiful day there", ["Last week on a beautiful day there"]),
+        #("In 1980 on a beautiful day there", ["Next week on a beautiful day there"]),
+        #("In 2030 on a beautiful day there", ["Next week on a beautiful day there"]),
+        #("Compared to 1980 on a beautiful day there", ["Compared to 2030 on a beautiful day there"]),
+        #("Compared to 2030 on a beautiful day there", ["Compared to 1980 on a beautiful day there"]),
+        #("Compared to 1980 there", ["Compared to 2030 there"]),
+        #("Compared to 2030 there", ["Compared to 1980 there"]),
+        # ("In 1980 on a beautiful day he", ["In 2030 on a beautiful day he"]),
+        # ("In 2030 on a beautiful day he", ["In 1980 on a beautiful day he"]),
+        ("In contrast on a beautiful day there", ["In summary on a beautiful day there"]),
+        ("In contrast on a beautiful day there", ["In addition on a beautiful day there"]),
+        ("In contrast on a beautiful day there", ["In response on a beautiful day there"]),
+        
         
     ]
     prompt_combos_llama = [
-        ("In Elmsville on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        # ("Compared to 1980 on a beautiful day there", ["Compared to 2030 on a beautiful day there"]),
+        # ("Compared to 2030 on a beautiful day there", ["Compared to 1980 on a beautiful day there"]),
+        # ("In 1980 on a beautiful day he", ["In 2030 on a beautiful day he"]),
+        # ("In 2030 on a beautiful day he", ["In 1980 on a beautiful day he"]),
+        ("In contrast on a beautiful day there", ["In summary on a beautiful day there"]),
+        ("In contrast on a beautiful day there", ["In addition on a beautiful day there"]),
+        ("In contrast on a beautiful day there", ["In response on a beautiful day there"]),
     ]
 
     output_to_measure = [" was", " is", " will"] # Make sure to include space at the beginning!
@@ -624,39 +645,39 @@ def run_ii_experiment_v3():
     for base_prompt, source_prompts in prompt_combos_olmo:
         results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
         ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-        ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+        #ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
     ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="final_project_data/llama")
     for base_prompt, source_prompts in prompt_combos_llama:
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="block_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-        ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+        #ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
     # mlp_output
-    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="final_project_data/olmo")
+    #ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="final_project_data/olmo")
     for base_prompt, source_prompts in prompt_combos_olmo:
         results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="mlp_output") # options: attention_input, mlp_output, block_output
         ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-        ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+        #ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="final_project_data/llama")
+    #ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="final_project_data/llama")
     for base_prompt, source_prompts in prompt_combos_llama:
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="mlp_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-        ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+        #ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
     # attention_output
-    ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="final_project_data/olmo")
+    #ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="final_project_data/olmo")
     for base_prompt, source_prompts in prompt_combos_olmo:
         results_df, output_results_df = ii_olmo.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_output") # options: attention_input, mlp_output, block_output
         ii_olmo.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-        ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+        #ii_olmo.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-    ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="final_project_data/llama")
+    #ii_llama = InterchangeIntervention(model_id="meta-llama/Llama-3.2-1B", folder_path="final_project_data/llama")
     for base_prompt, source_prompts in prompt_combos_llama:
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
-        ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
+        #ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
 
 def test_plots():
@@ -703,13 +724,15 @@ def main():
     ii_olmo.bar_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, layer_to_filter=6)
     """
 
-    #fact_recall_meas()
+    fact_recall_meas()
     #run_ii_experiment()
     #run_ii_experiment_v2()
-    run_ii_experiment_v3()
+    #run_ii_experiment_v3()
     #test_plots()
 
     # TODO: add it so folder gets added automatically instead of requiring user to pre-make it
+    # TODO: change file names to be more readable
+    # TODO: run "yesterday" and more relative time stuff
     
 
 

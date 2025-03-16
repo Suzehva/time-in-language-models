@@ -360,7 +360,7 @@ def run_task_1a(manager, model_id):
                 combined_logits[word]['softmax'] += softmaxed_logit
                 task1a_result_total[input_year_from_entry][word] += raw_logit
             
-        # Process the combined logits to compute averages for "softmaxed_logit" --> fo one year entry!
+        # Process the combined logits to compute averages for "softmaxed_logit" --> for one year entry!
         final_relevant_words_logits = [
             (word, 
             combined_data['raw'].item(), 
@@ -383,6 +383,8 @@ def run_task_1a(manager, model_id):
             ('was/were', d['was/were'].item(), d['was/were_soft'].item()), ('is/are', d['is/are'].item(), d['is/are_soft'].item()), ('will', d['will'].item(), d['will_soft'].item())
         ]
         task1a_result_total_list.append((model_id, year, "[all prompts]", "-", final_relevant_words_logits_total))
+        
+    manager.store_output_to_csv(task1a_result_total_list, "task1a/" + model_id + "_total")
     manager.create_probability_plots_1a(task1a_result_total_list, "task1a/")
 
 
@@ -642,10 +644,10 @@ def main():
         manager.load_model(model_id)
 
         # task 1a:
-        # run_task_1a(manager, model_id)
+        run_task_1a(manager, model_id)
 
-        generated_path, solns_path = run_task_2b(manager, model_id)
-        test_task_2b(generated_path, solns_path, model_id, manager)
+        #generated_path, solns_path = run_task_2b(manager, model_id)
+        #test_task_2b(generated_path, solns_path, model_id, manager)
         # run_task_1c(manager, model_id)
 
 
