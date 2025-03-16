@@ -607,14 +607,16 @@ def run_ii_experiment_v2():
 def run_ii_experiment_v3():
 
     prompt_combos_olmo = [
-        ("In 1980 on a beautiful day there", ["In Rome on a beautiful day there"]),
-        ("In Rome on a beautiful day there", ["In 1980 on a beautiful day there"]),
-        ("In 2030 on a beautiful day there", ["In Rome on a beautiful day there"]),
-        ("In Rome on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        #("In 1980 on a beautiful day there", ["In Rome on a beautiful day there"]),
+        #("In Rome on a beautiful day there", ["In 1980 on a beautiful day there"]),
+        #("In 2030 on a beautiful day there", ["In Rome on a beautiful day there"]),
+        #("In Rome on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        ("In 1980 on a beautiful day there", ["Yesterday on a beautiful day there"]),
+        ("In 2030 on a beautiful day there", ["Yesterday on a beautiful day there"]),
         
     ]
     prompt_combos_llama = [
-        ("In Elmsville on a beautiful day there", ["In 2030 on a beautiful day there"]),
+        #("In Elmsville on a beautiful day there", ["In 2030 on a beautiful day there"]),
     ]
 
     output_to_measure = [" was", " is", " will"] # Make sure to include space at the beginning!
@@ -710,6 +712,8 @@ def main():
     #test_plots()
 
     # TODO: add it so folder gets added automatically instead of requiring user to pre-make it
+    # TODO: change file names to be more readable
+    # TODO: run "yesterday" and more relative time stuff
     
 
 
