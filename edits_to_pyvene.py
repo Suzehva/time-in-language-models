@@ -1,5 +1,7 @@
-# EDITS BY ADITI. these should be completed to rune rome_olmo.py and rome_llama.py
-# this file is not meant to be run
+# EDITS BY ADITI. 
+# you should have installed pyvene (library). there are some changes you should make before running this repo
+# these changes should be completed to run casual_tracing.py and interchange_interventions.py
+# !!! this file is not meant to be run !!! 
 
 # TODO edit model.config for olmo
 
