@@ -1,21 +1,6 @@
 ### Winter 2025 | CS224N Final Project
-#### Aditi Bhaskar (aditijb@cs.stanford.edu) and Suze van Adrichem (suzeva@cs.stanford.edu)
+#### Aditi Bhaskar and Suze van Adrichem
+Time is a concept deeply embedded in natural language. In this project, we explore language models' understanding and usage of time and try to localize time in language models. 
+We find that language models possess an inherent sense of the current time—approximately 2003 for LLaMA and 2010 for OLMo for complicated settings and 2022 for both in simpler ones. Additionally, we find that models are capable of placing objects and events within specific timeframes and can reason using both their current time and the prompt time even when counterfactual information is presented. However, they exhibit poor performance in tasks measuring temporal associations.
 
-##### Goal. 
-
-Time is a concept that is deeply embedded in natural language. Knowing the current time is
-so critical for day-to-day conversations that newer chat models explicitly specify the current date in
-their system prompts. In this project, we explore time representation in language models (LM’s) -
-specifically, the conflict between an LM’s internal and in-context times.
-
-We consider three questions: (1) Can we determine a LM’s internal "current" time? (2) Where is
-time localized in LM’s? (3) Can we edit an LM to control time-related outputs? The first of these
-questions will help us develop a conceptual and qualitative understanding of time in relationship to
-LM’s and will lay the foundation for the second two. We will consider time from the perspective of
-temporal association, how an LM understands factual information at absolute times, and temporal
-reasoning, how an LM reasons about timelines and times relative to each other.
-
-Finding answers to the second and third question is exciting because it could advance our understand-
-ing of how time is represented internally in LM’s, which could be helpful in determining strategies to
-make LM’s better at time-related tasks. We will utilize causal tracing and interchange interventions 
-(as outlined in Stanford's pyvene https://github.com/stanfordnlp/pyvene) to explore this.
+We then try to localize time in language models using Pyvene. We find that layers 0-11 and 0-12 in the block output of the token representing time for Llama and OLMo respectively seem the most plausible options. We also find that replacing time with location has has a similar pattern, suggesting that time and location (and maybe more) share the same representation space. 

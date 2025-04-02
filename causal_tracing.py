@@ -620,7 +620,7 @@ def main():
 
         # # 4.
         # # DO THIS: use this to control whether you plot only residuals vs mlp/attention
-        plot_only_block_outputs = False  
+        # plot_only_block_outputs = False  
         add_prompts_for_beautiful_day_mlp_attention(tracer)
 
         # # 5. 
@@ -644,11 +644,11 @@ def main():
         # loop over every prompt to run pyvene
         for p in tracer.get_prompts():
             # part 1 & 2     
-            # tracer.factual_recall(prompt=p)  
-            # tracer.corrupted_run(prompt=p)  
+            tracer.factual_recall(prompt=p)  
+            tracer.corrupted_run(prompt=p)  
 
-            # part 3: regular run over all tenses
-            tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
+            # # part 3: regular run over all tenses
+            # tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
 
 
 if __name__ == "__main__":

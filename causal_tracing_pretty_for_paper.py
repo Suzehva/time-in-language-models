@@ -395,7 +395,7 @@ class CausalTracer:
         # Choose font and size
         text_height = 170  # Adjust as needed
         #  this font is on my system; macos
-        font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 130)  # Use a system TTF font with size 130
+        font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 80)  # Use a system TTF font with size 130
 
         # Create a new image with extra space for the title
         img_with_title = Image.new("RGBA", (total_width, max_height + text_height), (255, 255, 255, 255))
