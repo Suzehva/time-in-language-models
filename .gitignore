@@ -5,6 +5,7 @@ __pycache__/
 
 *.csv
 *.env
+*.DS_Store
 time_env/*
 
 # C extensions
