@@ -79,10 +79,10 @@ class CausalTracer:
         print(f'Using device: {self.device}')
         if self.model_id == "allenai/OLMo-1B-hf":
             self.config, self.tokenizer, self.model = create_olmo(name=self.model_id) 
-            self.name = "OLMo"
+            self.name = "olmo"
         elif self.model_id == "gpt2":
             self.config, self.tokenizer, self.model = create_gpt2()
-            self.name= "GPT-2"
+            self.name= "gpt2"
         elif self.model_id == "meta-llama/Llama-3.2-1B":
             # bit hacky but oh well
             from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
@@ -90,7 +90,7 @@ class CausalTracer:
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_id, legacy=False)
             self.config = AutoConfig.from_pretrained(self.model_id)
             self.model = AutoModelForCausalLM.from_pretrained(self.model_id, torch_dtype=torch.bfloat16, device_map=self.device, config=self.config)
-            self.name = "Llama"
+            self.name = "llama"
             
         else:
            raise Exception(f'only olmo, gpt2, llama is supported at this time') 
@@ -207,7 +207,7 @@ class CausalTracer:
         print(prompt.prompt)
 
         base = self.tokenizer(prompt.prompt, return_tensors="pt").to(self.device)
-        # print("\nDEBUG base: " + str(base))
+        print("\nDEBUG base: " + str(base))
 
         filepaths=[]
 
@@ -310,33 +310,21 @@ class CausalTracer:
 
         # change color based on stream
         hi_color = "purple" # "#660099" 
-        if stream=="mlp_activation":
+        if(stream=="mlp_activation"):
             hi_color="pink"  
-        if stream=="attention_output":
+        if(stream=="attention_output"):
             hi_color="#FF9900"  # orange 
 
-        leg_pos="right"
-        if "was" in soln_txt:
-            leg_pos="none"
-        if "is" in soln_txt:
-            leg_pos="none"
-        if "will" in soln_txt:
-            leg_pos="right"
-
-
-        y_axis=f"Restored {stream} layer"
-        if "is" in soln_txt:
-            y_axis=""
-        if "will" in soln_txt:
-            y_axis=""
-
-        # making the names prettier for the graph
-        if stream=="block_output":
-            stream="residual block output"
-        if stream=="mlp_activation":
-            stream="mlp output"
-        if stream=="attention_output":
-            stream="attention output"
+        prompt_len=len(prompt.prompt)
+        font_size = 6
+        if prompt_len < 20:
+            font_size = 14
+        if prompt_len < 40:
+            font_size = 12
+        elif prompt_len < 60:
+            font_size = 10.5
+        elif prompt_len < 75:
+            font_size = 8
 
         plot = (
             ggplot(df)
@@ -345,8 +333,7 @@ class CausalTracer:
             + theme(
                 figure_size=(4, 5),
                 axis_text_x=element_text(rotation=90, size=9.5),
-                plot_title=element_text(size=12), # make sure title fits
-                legend_position=leg_pos
+                plot_title=element_text(size=font_size), # make sure title fits
             )
             + scale_x_continuous(
                 breaks=breaks,
@@ -357,17 +344,17 @@ class CausalTracer:
                 labels=[str(i) for i in range(self.model.config.num_hidden_layers)]  # Convert to strings for labels
             )
             + labs(
-                title=soln_txt, # todo move the model name out
+                title=prompt.prompt,
                 x="",  # Remove x-axis label
-                y=y_axis, 
-                fill="Probability",
+                y=f"Restored {stream} layer in {self.name}",
+                fill="p("+soln_txt+")",
             )
         )
 
         print(df.columns)
         print(df.head())
         ggsave(
-            plot, filename=filepath+".png", dpi=200 
+            plot, filename=filepath+".png", dpi=200 # write pdf graph # TODO: how to save as png??
         )
 
     def merge_images_horizontally(self, image_paths, output_path="merged.png", title="hello_world"):
@@ -387,45 +374,13 @@ class CausalTracer:
             x_offset += img.width
             img.close()
 
-        # Save merged image
-        merged_image.save(output_path)
-
-
-        # merge the title onto the 3 plots:
-        # Choose font and size
-        text_height = 170  # Adjust as needed
-        #  this font is on my system; macos
-        font = ImageFont.truetype("/System/Library/Fonts/Supplemental/Arial.ttf", 80)  # Use a system TTF font with size 130
-
-        # Create a new image with extra space for the title
-        img_with_title = Image.new("RGBA", (total_width, max_height + text_height), (255, 255, 255, 255))
-        draw = ImageDraw.Draw(img_with_title)
-
-        # Get text bounding box
-        bbox = draw.textbbox((0, 0), title, font=font)
-        text_width = bbox[2] - bbox[0]  # Width of the text
-        text_x = (total_width - text_width) // 2
-        text_y = (text_height - (bbox[3] - bbox[1])) // 2  # Center vertically
-
-        # Draw the title in the extra space
-        title =  self.name + ": " + title  # update title to include model name
-        draw.text((text_x, text_y), title, font=font, fill="black")
-
-        # Paste the merged image below the title
-        img_with_title.paste(merged_image, (0, text_height))
-
-        # Save or show the result
-        img_with_title.save(output_path[:-4]+"_fancy"+".png") # with the title
-
-
-        # delete the obsolete!
         # delete all the extra images and csv files
         for img_path in image_paths:
             os.remove(img_path)  # Delete the individual img file
             os.remove(img_path[:-4] + ".csv") # delete the csv
 
-        os.remove(output_path)  # remove the image without the title
-
+        # Save merged image
+        merged_image.save(output_path)
 
 
 def restore_corrupted_with_interval_config(
@@ -646,7 +601,7 @@ def add_prompts_over_years(tracer: CausalTracer, years=YEARS, prompts=PROMPTS, t
 
 def main():
     timestamp = datetime.datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
-    models = [("allenai/OLMo-1B-hf", "pyvene_causal_tracing/olmo_paper"), ("meta-llama/Llama-3.2-1B", "pyvene_causal_tracing/llama_paper")]
+    models = [("allenai/OLMo-1B-hf", "pyvene_causal_tracing/olmo"), ("meta-llama/Llama-3.2-1B", "pyvene_causal_tracing/llama")]
     for model, folder in models:
         tracer = CausalTracer(model_id=model, folder_path=folder) 
         plot_only_block_outputs = True
@@ -665,7 +620,7 @@ def main():
 
         # # 4.
         # # DO THIS: use this to control whether you plot only residuals vs mlp/attention
-        plot_only_block_outputs = False  
+        # plot_only_block_outputs = False  
         add_prompts_for_beautiful_day_mlp_attention(tracer)
 
         # # 5. 
@@ -689,11 +644,11 @@ def main():
         # loop over every prompt to run pyvene
         for p in tracer.get_prompts():
             # part 1 & 2     
-            # tracer.factual_recall(prompt=p)  
-            # tracer.corrupted_run(prompt=p)  
+            tracer.factual_recall(prompt=p)  
+            tracer.corrupted_run(prompt=p)  
 
-            # part 3: regular run over all tenses
-            tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
+            # # part 3: regular run over all tenses
+            # tracer.restore_run(prompt=p, timestamp=timestamp, plot_only_block_outputs=plot_only_block_outputs)
 
 
 if __name__ == "__main__":
