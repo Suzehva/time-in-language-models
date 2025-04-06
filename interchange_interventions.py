@@ -120,8 +120,7 @@ class InterchangeIntervention:
             raise Exception(f"number of tokens in source ({len(sources_ids.input_ids[0])}) are not the same as number of tokens in the base ({len(self.base_ids.input_ids[0])}). Source tokens: {sources_tokens}, Base tokens: {self.base_tokens}")
         self.sources_ids, self.sources_tokens = [sources_ids], [sources_tokens] # for some reason the input needs to be a list
         tokens = [self.tokenizer.encode(word) for word in output_to_measure] # tokenizer.encode returns list of token ids
-        #print(f"tokens: {tokens}") # for llama a=with input [" was", " will"], this prints tokens: [[128000, 574], [128000, 690]]. Olmo prints [[369], [588]]
-
+ 
         intervention_data = []
         output_intervention_data = []
 
@@ -143,17 +142,12 @@ class InterchangeIntervention:
                     # if token is a list, it means the words we are measuring are getting split up into multiple tokens. 
                     # # To plot them, I just multiply their probabilities since we're dealing with conditional probability, 
                     # TODO: should verify if that's okay
-                    #raise Exception(f"current token: {token}")
                     if self.model_id == "meta-llama/Llama-3.2-1B" and len(token) == 2 and token[0] == 128000: # 128000 is <|begin_of_text|> token for llama which we want to ignore TODO don't hardcode this
                         token = [token[1]]
                     if len(token) > 1:
                         # this happens for llama NEVERMIND THAT IS THE <|begin_of_text|> SO THIS SHOULD NEVER HAPPEN
                         raise Exception("token should not be more than one token")
-                        prob = 1
-                        for t in token:
-                            prob *= float(distrib[0][-1][t])
                     else:
-                        # this happens for gpt2, olmo
                         prob = float(distrib[0][-1][token])
 
                     intervention_data.append(
@@ -207,7 +201,6 @@ class InterchangeIntervention:
 
     def heatmap_plot(self, df, base: str, sources: list[str], output_to_measure: list[str]):
         df["layer"] = df["layer"].astype(int)
-        #df["token"] = df["token"].astype("category")
         formatted_output_to_measure = [word.replace(" ", "_").replace("\n", "\\n") for word in output_to_measure] # based off of format_token funtion in basic_utils
         df["token"] = pd.Categorical(
             df["token"],
@@ -679,7 +672,6 @@ def run_ii_experiment_v3():
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         #ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
 
-
 def run_ii_experiment_v4():
     prompt_combos_olmo = [
         #("In 2030 on a beautiful day there", ["In 1980 on a beautiful day there"]),
@@ -732,10 +724,6 @@ def run_ii_experiment_v4():
         results_df, output_results_df = ii_llama.intervene(base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure, component="attention_output") # options: attention_input, mlp_output, block_output
         ii_llama.heatmap_plot(df=results_df, base=base_prompt, sources=source_prompts, output_to_measure=output_to_measure)
         #ii_llama.text_heatmap_plot(output_df=output_results_df, base=base_prompt, sources=source_prompts)
-
-
-
-
 
 def test_plots():
     ii_olmo = InterchangeIntervention(model_id="allenai/OLMo-1B-hf", folder_path="ii_playground/olmo")
@@ -792,8 +780,6 @@ def main():
     # TODO: change file names to be more readable
     # TODO: run "yesterday" and more relative time stuff
     
-
-
 
 if __name__ == "__main__":
     main()
