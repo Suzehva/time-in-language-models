@@ -4,10 +4,6 @@
 # !!! this file is not meant to be run !!! 
 
 # TODO edit model.config for olmo
-
-# in pyvene's init.py, around line 55
-from .models.olmo.modelings_intervenable_olmo import create_olmo  # aditi update
-
 # in pyvene's basic_utils.py, around line 44
 def embed_to_distrib(model, embed, log=False, logits=False):
     """Convert an embedding to a distribution over the vocabulary"""
