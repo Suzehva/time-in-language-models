@@ -1,3 +1,6 @@
 [submodule "ravel"]
 	path = ravel
 	url = https://github.com/suzehva/ravel.git
+[submodule "pyvene"]
+	path = pyvene
+	url = https://github.com/Suzehva/pyvene.git
